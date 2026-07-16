@@ -1,0 +1,14 @@
+{
+  "name": "Practice.GOAP.Runtime",
+  "rootNamespace": "Practice.GOAP",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

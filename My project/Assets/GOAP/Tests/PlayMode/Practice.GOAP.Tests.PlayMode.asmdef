@@ -1,0 +1,21 @@
+{
+  "name": "Practice.GOAP.Tests.PlayMode",
+  "rootNamespace": "Practice.GOAP.Tests",
+  "references": [
+    "Practice.GOAP.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

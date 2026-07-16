@@ -1,0 +1,24 @@
+{
+  "name": "Practice.GOAP.Tests.EditMode",
+  "rootNamespace": "Practice.GOAP.Tests",
+  "references": [
+    "Practice.GOAP.Runtime",
+    "Practice.GOAP.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

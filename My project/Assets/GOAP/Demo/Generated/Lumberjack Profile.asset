@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c8cf40c5ac2f94478ea02222e2d9fc9, type: 3}
+  m_Name: Lumberjack Profile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapAgentProfile
+  _domain: {fileID: 11400000, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _actions:
+  - {fileID: 6724160440931194657, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _goals:
+  - {fileID: -6521199194074589057, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _initialFacts: []
+  _sensors:
+  - _name: Wood Nearby
+    _kind: 0
+    _fact: {fileID: 6300822926666576489, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+    _sourceId: Wood
+    _targetId: 
+    _requiredTag: 
+    _layerMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    _radius: 0
+    _comparison: 5
+    _threshold: 1
+    _scale: 1
+    _offset: 0
+    _componentType: 
+    _memberName: 
+    _constantValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _updateMode: 0
+    _interval: 0.5
+  - _name: Wood Inventory
+    _kind: 1
+    _fact: {fileID: 2182120248842465943, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+    _sourceId: Wood
+    _targetId: 
+    _requiredTag: 
+    _layerMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    _radius: 5
+    _comparison: 5
+    _threshold: 1
+    _scale: 1
+    _offset: 0
+    _componentType: 
+    _memberName: 
+    _constantValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _updateMode: 0
+    _interval: 0.5
+  _decisionInterval: 0.15
+  _plannerSettings:
+    MaxExpandedStates: 5000
+    MaxPlanDepth: 32
+    MaxPlanningMilliseconds: 10
+  _logDecisions: 0

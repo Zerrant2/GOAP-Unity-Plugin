@@ -1,0 +1,1583 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9166635896836178147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Recover Energy
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 98fb98296a644ea581312b643c5fbee9
+  _displayName: Recover Energy
+  _description: Become rested.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 40
+  _activationConditions:
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-8759850245903044212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: New Action
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 0d6405f0b6ef4db1a2607c397ee70427
+  _displayName: Test acttion
+  _description: 
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _executorId: rest
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -3535768714681685927}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 1171269577281306745}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 5651453757314100098}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-8044055710045271477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: New Fact
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 6166e93136d64d66b9d7c5bcb8df7528
+  _displayName: Test
+  _description: 
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-6521199194074589057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Collect Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 9c2d0f7c52ab45888c7d9b2ac84bfa18
+  _displayName: Collect Wood
+  _description: Collect at least one unit of wood.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 30
+  _activationConditions: []
+  _desiredState:
+  - _fact: {fileID: 2182120248842465943}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-5316139241072878260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Take Weapon
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: dae5d8c194a843888a0ff7279fac610a
+  _displayName: Take Weapon
+  _description: Collect a weapon before confronting an enemy.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.5
+  _executorId: take-weapon
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 0
+    _targetCategory: Weapon
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 1
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 2
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 5
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 9
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 8241285419468350520}
+      _booleanValue: 1
+      _integerValue: 1
+      _floatValue: 1
+      _enumValue: 1
+    _eventId: 
+  - _kind: 6
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: -497492755130047371}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 8241285419468350520}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -497492755130047371}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 8241285419468350520}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-5097941207007703827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Satisfy Hunger
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: f3b0ff45e6944efe9aba02015384fdeb
+  _displayName: Satisfy Hunger
+  _description: Become not hungry using the cheapest available plan.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 50
+  _activationConditions:
+  - _fact: {fileID: 652946593714867575}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 652946593714867575}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-4615070611711814270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Rest in Bed
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 544920d8a7b54943b6f3881988bb9ee4
+  _displayName: Rest in Bed
+  _description: Move to an available bed and recover energy.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.25
+  _executorId: rest
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 0
+    _targetCategory: Bed
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 1
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 2
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 3
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 1.1
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 9
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: -1250998477608785408}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 6
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 5651453757314100098}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -1250998477608785408}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &-3535768714681685927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Food Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 53e41e47e6e84131a092b87fdf0d0bf6
+  _displayName: Food Available
+  _description: Usable food exists in the world.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-1250998477608785408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Is Tired
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 53976a5b8ad14fc9a7e6266f608bebd2
+  _displayName: Is Tired
+  _description: The agent needs rest.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-497492755130047371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Weapon Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: c8eb630a02e74c5692bad8cca67b2206
+  _displayName: Weapon Available
+  _description: A weapon can be collected.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-180825494240955175
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Attack Enemy
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 9db10d28bdc0414596b4a436ae88bb7d
+  _displayName: Attack Enemy
+  _description: Approach and defeat the visible enemy.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 2
+  _executorId: attack
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 0
+    _targetCategory: Enemy
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 1
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 2
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.8
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 5
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 6
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: 5538643573287632904}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 8241285419468350520}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 5538643573287632904}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9315a24090d14564f90ce093e02cdbd0, type: 3}
+  m_Name: GOAP Demo Domain
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapDomain
+  _facts:
+  - {fileID: 652946593714867575}
+  - {fileID: -1250998477608785408}
+  - {fileID: 1171269577281306745}
+  - {fileID: -3535768714681685927}
+  - {fileID: 5651453757314100098}
+  - {fileID: 8241285419468350520}
+  - {fileID: -497492755130047371}
+  - {fileID: 5538643573287632904}
+  - {fileID: -8044055710045271477}
+  - {fileID: 6300822926666576489}
+  - {fileID: 2182120248842465943}
+  _actions:
+  - {fileID: 5389096566062648349}
+  - {fileID: 1007246291679815055}
+  - {fileID: -4615070611711814270}
+  - {fileID: -5316139241072878260}
+  - {fileID: -180825494240955175}
+  - {fileID: -8759850245903044212}
+  - {fileID: 6724160440931194657}
+  _goals:
+  - {fileID: -5097941207007703827}
+  - {fileID: -9166635896836178147}
+  - {fileID: 1976631571243453605}
+  - {fileID: -6521199194074589057}
+  _nodeLayout:
+  - _definitionId: 1d5a5cf317004fd8a4bf1668ffc8bd63
+    _kind: 0
+    _position: {x: -95, y: -25}
+  - _definitionId: 411a5e1241dd4ad68690a77431191446
+    _kind: 0
+    _position: {x: 297, y: 87}
+  - _definitionId: 544920d8a7b54943b6f3881988bb9ee4
+    _kind: 0
+    _position: {x: 325, y: 391}
+  - _definitionId: dae5d8c194a843888a0ff7279fac610a
+    _kind: 0
+    _position: {x: 80, y: 580}
+  - _definitionId: 9db10d28bdc0414596b4a436ae88bb7d
+    _kind: 0
+    _position: {x: 390, y: 580}
+  - _definitionId: f3b0ff45e6944efe9aba02015384fdeb
+    _kind: 1
+    _position: {x: 801, y: 75}
+  - _definitionId: 98fb98296a644ea581312b643c5fbee9
+    _kind: 1
+    _position: {x: 911, y: 306}
+  - _definitionId: f5fc693773644657aba5c4d09f462d1e
+    _kind: 1
+    _position: {x: 760, y: 580}
+  - _definitionId: 0d6405f0b6ef4db1a2607c397ee70427
+    _kind: 0
+    _position: {x: -164, y: 303}
+  - _definitionId: a1cb15efd6394de6b8ee4432f5bccb6d
+    _kind: 2
+    _position: {x: 40, y: 1060}
+  - _definitionId: 09416cf1f805447693afe90269f1fc98
+    _kind: 2
+    _position: {x: 40, y: 1190}
+  - _definitionId: db87df6f33dc43aabf32c56cc0aa0b14
+    _kind: 0
+    _position: {x: 390, y: 1040}
+  - _definitionId: 9c2d0f7c52ab45888c7d9b2ac84bfa18
+    _kind: 1
+    _position: {x: 760, y: 1040}
+  _graphGroups: []
+  _graphNotes: []
+--- !u!114 &652946593714867575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Is Hungry
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 00be68888ed444969427ac72815497bb
+  _displayName: Is Hungry
+  _description: The agent needs food.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &1007246291679815055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Eat Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 411a5e1241dd4ad68690a77431191446
+  _displayName: Eat Food
+  _description: Consume carried food to satisfy hunger.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _executorId: eat
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.4
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 9
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 1171269577281306745}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 9
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 652946593714867575}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: 652946593714867575}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 1171269577281306745}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 652946593714867575}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 1171269577281306745}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &1171269577281306745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Has Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: f1a3e4a2d2f148ee904ed2e6c0c9b92d
+  _displayName: Has Food
+  _description: The agent carries food.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &1976631571243453605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Defeat Enemy
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: f5fc693773644657aba5c4d09f462d1e
+  _displayName: Defeat Enemy
+  _description: Remove the immediate threat. This goal has the highest priority.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 100
+  _activationConditions:
+  - _fact: {fileID: 5538643573287632904}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 5538643573287632904}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &2182120248842465943
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Wood Count
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 09416cf1f805447693afe90269f1fc98
+  _displayName: Wood Count
+  _description: Amount of wood in the agent inventory.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 1
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &5389096566062648349
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Take Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 1d5a5cf317004fd8a4bf1668ffc8bd63
+  _displayName: Take Food
+  _description: Move to the nearest food source and collect it.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _executorId: take-food
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 0
+    _targetCategory: Food
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 1
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 2
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 3
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.45
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 5
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 9
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 1171269577281306745}
+      _booleanValue: 1
+      _integerValue: 1
+      _floatValue: 1
+      _enumValue: 1
+    _eventId: 
+  - _kind: 6
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: -3535768714681685927}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 1171269577281306745}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -3535768714681685927}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 1171269577281306745}
+    _comparison: 0
+    _value: 1
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+--- !u!114 &5538643573287632904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Enemy Visible
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: e0cb1f24f9604ae2a21b48ff94d09955
+  _displayName: Enemy Visible
+  _description: A live enemy is visible.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &5651453757314100098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Bed Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 04d5c545b9714874862e890b8a44c119
+  _displayName: Bed Available
+  _description: A usable bed exists in the world.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &6300822926666576489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Wood Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: a1cb15efd6394de6b8ee4432f5bccb6d
+  _displayName: Wood Available
+  _description: A reservable tree is available.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &6724160440931194657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Gather Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: db87df6f33dc43aabf32c56cc0aa0b14
+  _displayName: Gather Wood
+  _description: Reserve the nearest tree, move to it, and collect one unit of wood.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _executorId: gather-wood
+  _builtInExecution:
+    _mode: 3
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 1
+    _animatorTrigger: 
+  _executionSteps:
+  - _kind: 0
+    _targetCategory: Wood
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 1
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 2
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 4
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.65
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 5
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 7
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: Wood
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  - _kind: 6
+    _targetCategory: 
+    _targetId: 
+    _useNavMesh: 0
+    _moveSpeed: 3.5
+    _interactionRange: 1.1
+    _duration: 0.5
+    _timeout: 10
+    _itemId: 
+    _amount: 1
+    _factValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _eventId: 
+  _preconditions:
+  - _fact: {fileID: 6300822926666576489}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 2182120248842465943}
+    _comparison: 2
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 6300822926666576489}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 2182120248842465943}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 0
+    _effectOperation: 1
+--- !u!114 &8241285419468350520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Has Weapon
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 09dd7b9d55734ac492da27497d0e9cbe
+  _displayName: Has Weapon
+  _description: The agent carries a weapon.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0

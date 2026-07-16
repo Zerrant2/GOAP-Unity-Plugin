@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c8cf40c5ac2f94478ea02222e2d9fc9, type: 3}
+  m_Name: Worker Profile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapAgentProfile
+  _domain: {fileID: 11400000, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _actions:
+  - {fileID: 5389096566062648349, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  - {fileID: 1007246291679815055, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _goals:
+  - {fileID: -5097941207007703827, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+  _initialFacts:
+  - _fact: {fileID: 652946593714867575, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+    _booleanValue: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+  _sensors:
+  - _name: Food Nearby
+    _kind: 0
+    _fact: {fileID: -3535768714681685927, guid: 21c9e1deeab541e41a9e80ed53ea7aa1, type: 2}
+    _sourceId: Food
+    _targetId: 
+    _requiredTag: 
+    _layerMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    _radius: 0
+    _comparison: 5
+    _threshold: 1
+    _scale: 1
+    _offset: 0
+    _componentType: 
+    _memberName: 
+    _constantValue:
+      _fact: {fileID: 0}
+      _booleanValue: 0
+      _integerValue: 0
+      _floatValue: 0
+      _enumValue: 0
+    _updateMode: 0
+    _interval: 0.5
+  _decisionInterval: 0.15
+  _plannerSettings:
+    MaxExpandedStates: 5000
+    MaxPlanDepth: 32
+    MaxPlanningMilliseconds: 10
+  _logDecisions: 0
