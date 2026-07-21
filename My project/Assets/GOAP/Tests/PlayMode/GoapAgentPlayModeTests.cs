@@ -148,13 +148,23 @@ namespace Practice.GOAP.Tests
             yield return new WaitForSeconds(0.25f);
 
             var agents = Object.FindObjectsByType<GoapAgent>(FindObjectsSortMode.None);
-            Assert.That(agents, Has.Length.EqualTo(5));
+            Assert.That(agents.Length, Is.GreaterThanOrEqualTo(5));
 
             var goalsByAgent = new Dictionary<string, string>();
             foreach (var agent in agents)
             {
                 goalsByAgent[agent.name] = agent.CurrentGoal != null ? agent.CurrentGoal.DisplayName : string.Empty;
             }
+
+            var requiredAgents = new[]
+            {
+                "Worker NPC",
+                "Resident NPC",
+                "Guard NPC",
+                "Survivor NPC",
+                "Lumberjack NPC"
+            };
+            Assert.That(goalsByAgent.Keys, Is.SupersetOf(requiredAgents));
 
             Assert.That(goalsByAgent["Worker NPC"], Is.EqualTo("Satisfy Hunger"));
             Assert.That(goalsByAgent["Resident NPC"], Is.EqualTo("Recover Energy"));

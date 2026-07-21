@@ -34,6 +34,7 @@ namespace Practice.GOAP.Editor
         private Vector2 _lastPointerPosition;
 
         public event Action<GoapNodeKind, Vector2> CreateRequested;
+        public event Action<GoapNodeKind> BuilderRequested;
         public event Action<IReadOnlyList<GoapDefinition>> DuplicateRequested;
         public event Action<GoapDefinition, GoapGraphConnectionRole, Vector2> ConnectedFactRequested;
 
@@ -391,7 +392,9 @@ namespace Practice.GOAP.Editor
             evt.menu.AppendSeparator();
             evt.menu.AppendAction("Create/Fact", _ => CreateRequested?.Invoke(GoapNodeKind.Fact, position));
             evt.menu.AppendAction("Create/Action", _ => CreateRequested?.Invoke(GoapNodeKind.Action, position));
+            evt.menu.AppendAction("Create/Action with Wizard", _ => BuilderRequested?.Invoke(GoapNodeKind.Action));
             evt.menu.AppendAction("Create/Goal", _ => CreateRequested?.Invoke(GoapNodeKind.Goal, position));
+            evt.menu.AppendAction("Create/Goal with Wizard", _ => BuilderRequested?.Invoke(GoapNodeKind.Goal));
             evt.menu.AppendAction("Layout/Sort Graph", _ => SortGraph());
             evt.menu.AppendAction("Layout/Sort Selection", _ => SortSelection());
             evt.menu.AppendAction("Layout/Align Left", _ => AlignSelection(true));

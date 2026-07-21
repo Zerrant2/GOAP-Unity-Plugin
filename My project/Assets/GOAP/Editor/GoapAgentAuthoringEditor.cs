@@ -15,6 +15,11 @@ namespace Practice.GOAP.Editor
             if (authoring.Profile == null)
             {
                 EditorGUILayout.HelpBox("Assign or create an Agent Profile.", MessageType.Info);
+                if (GUILayout.Button("Open Setup Wizard"))
+                {
+                    GoapContentWizardWindow.Open(null, authoring.gameObject);
+                }
+
                 if (GUILayout.Button("Create Agent Profile"))
                 {
                     CreateProfile(authoring);
@@ -32,6 +37,11 @@ namespace Practice.GOAP.Editor
                 {
                     authoring.ApplyProfile();
                     EditorUtility.SetDirty(authoring);
+                }
+
+                if (GUILayout.Button("Open Content Wizard"))
+                {
+                    GoapContentWizardWindow.Open(domain, authoring.gameObject);
                 }
             }
 

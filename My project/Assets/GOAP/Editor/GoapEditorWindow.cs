@@ -42,12 +42,14 @@ namespace Practice.GOAP.Editor
             RestoreLastDomain();
             EditorApplication.update += OnEditorUpdate;
             Undo.undoRedoPerformed += RefreshAll;
+            GoapContentCreationService.DomainChanged += OnDomainContentChanged;
         }
 
         private void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
             Undo.undoRedoPerformed -= RefreshAll;
+            GoapContentCreationService.DomainChanged -= OnDomainContentChanged;
             DestroyDefinitionEditor();
         }
 
@@ -63,6 +65,11 @@ namespace Practice.GOAP.Editor
             _domainField.RegisterValueChangedCallback(evt => SetDomain(evt.newValue as GoapDomain));
             toolbar.Add(_domainField);
             toolbar.Add(new ToolbarButton(CreateDomain) { text = "New Domain" });
+            toolbar.Add(new ToolbarButton(() => GoapContentWizardWindow.Open(_domain))
+            {
+                text = "Content Wizard",
+                tooltip = "Create agents, behaviour presets, profiles, and Smart Objects."
+            });
             toolbar.Add(new ToolbarButton(Save) { text = "Save" });
             toolbar.Add(new ToolbarButton(ValidateDomain) { text = "Validate" });
             toolbar.Add(new ToolbarButton(GoapRuntimeDebuggerWindow.Open) { text = "Debugger" });
@@ -160,6 +167,7 @@ namespace Practice.GOAP.Editor
 
             _graphView = new GoapGraphView();
             _graphView.CreateRequested += CreateAtPosition;
+            _graphView.BuilderRequested += OpenBuilder;
             _graphView.DuplicateRequested += DuplicateDefinitions;
             _graphView.ConnectedFactRequested += CreateConnectedFact;
 
@@ -476,6 +484,18 @@ namespace Practice.GOAP.Editor
                         item => item.Configure("New Goal", 1, null, null),
                         position);
                     break;
+            }
+        }
+
+        private void OpenBuilder(GoapNodeKind kind)
+        {
+            if (kind == GoapNodeKind.Action)
+            {
+                GoapContentWizardWindow.OpenAction(_domain);
+            }
+            else if (kind == GoapNodeKind.Goal)
+            {
+                GoapContentWizardWindow.OpenGoal(_domain);
             }
         }
 
@@ -799,6 +819,14 @@ namespace Practice.GOAP.Editor
 
             _nextRuntimeRefresh = EditorApplication.timeSinceStartup + 0.25d;
             _graphView?.UpdateRuntimeHighlights();
+        }
+
+        private void OnDomainContentChanged(GoapDomain domain)
+        {
+            if (domain == _domain)
+            {
+                RefreshAll();
+            }
         }
 
         private void DestroyDefinitionEditor()

@@ -89,6 +89,17 @@ namespace Practice.GOAP
             return step;
         }
 
+        public static GoapActionStep MoveToNamedTarget(
+            string targetId,
+            float range = 1.1f,
+            float speed = 3.5f,
+            bool useNavMesh = false)
+        {
+            var step = Move(range, speed, useNavMesh);
+            step._targetId = targetId;
+            return step;
+        }
+
         public static GoapActionStep Wait(float duration)
         {
             var step = new GoapActionStep(GoapActionStepKind.Wait);

@@ -11,6 +11,8 @@
 5. Откройте `Tools > GOAP > Runtime Debugger` и выберите NPC в Hierarchy.
 6. Откройте `Tools > GOAP > Planner Graph`, чтобы видеть активную цель и найденный план.
 
+Для создания собственного контента откройте `Tools > GOAP > Content Wizard` или нажмите `Content Wizard` в окне графа.
+
 В демонстрационной сцене пять заранее созданных агентов. Они находятся в Hierarchy и настраиваются через `GoapAgentAuthoring`, без создания NPC из bootstrap-кода.
 
 | NPC | Профиль | Поведение |
@@ -116,6 +118,66 @@ World State внутри runtime компилируется в индексы, B
 Ошибки и предупреждения показываются цветом и меткой непосредственно на ноде. В панели Validation доступны исправления `Create Executor`, `Add Producer` и `Open Sensor`.
 
 В Play Mode оранжевым выделяется выполняемое действие, жёлтым весь план, зелёным активная цель, бирюзовым изменённые Facts.
+
+## Быстрое создание контента
+
+Откройте `Tools > GOAP > Content Wizard` (`Ctrl+Shift+N`). В мастере пять вкладок.
+
+### Agent
+
+1. Перетащите готовый GameObject NPC в `Existing Object` или оставьте поле пустым, чтобы создать нового агента.
+2. Перетащите готовый `Agent Profile`. Если профиля ещё нет, назначьте `Domain` и введите имя: мастер создаст Profile рядом с Domain.
+3. При необходимости включите `Inventory` и `Stats`.
+4. Нажмите `Setup Selected Object` или `Create Agent`.
+
+Мастер сам добавляет `GoapAgentAuthoring`, `GoapAgent`, универсальный исполнитель и профильный сенсор. У нового агента можно включить `Visible Placeholder`, чтобы сразу получить видимую Capsule в сцене.
+
+### Action
+
+1. Назначьте `Domain`, введите имя, стоимость и при необходимости измените автоматически созданный `Executor ID`.
+2. В `Preconditions` добавьте Facts, которые должны быть выполнены до запуска действия.
+3. В `Effects` добавьте хотя бы одно изменение World State.
+4. Выберите `Execution Recipe` и заполните только относящиеся к нему настройки.
+5. Проверьте строку `Generated Steps` и нажмите `Create Action`.
+
+Доступные рецепты: `Wait`, `Move To Named Target`, `Smart Object Interaction`, `Gather Resource`, `Consume Inventory`, `Trigger Animation` и `Invoke Event`. Мастер автоматически строит последовательность универсальных Steps. Например, `Gather Resource` создаёт Find, Reserve, Move, Interact, Wait, Consume Target, Inventory Add и Release.
+
+Из графа Action Builder открывается через правый клик по пустому месту и `Create > Action with Wizard`.
+
+Строки условий учитывают тип Fact: Boolean редактируется переключателем, Integer и Float получают числовые сравнения и операции Set/Add/Subtract, Enum показывает список вариантов. Блок `Create and Connect New Fact` создаёт Fact внутри текущего Domain и сразу подключает его в выбранный список.
+
+### Goal
+
+1. Назначьте `Domain`, задайте название и Priority.
+2. Добавьте необязательные `Activation Conditions`.
+3. Добавьте обязательный `Desired State`.
+4. Проверьте `Reachability Preview`.
+5. Нажмите `Create Goal`.
+
+`Reachability Preview` показывает Actions, эффекты которых могут произвести каждое желаемое условие. `Missing producer` означает, что для этой части Goal нужно создать или исправить Action.
+
+Из графа Goal Builder открывается через правый клик по пустому месту и `Create > Goal with Wizard`.
+
+### Behaviour Preset
+
+1. Назначьте `Domain`.
+2. Выберите `Basic Needs` или `Resource Gathering`.
+3. Оставьте включёнными `Agent Profile`, `Scene Agent` и создание объектов мира, если нужен полностью готовый пример.
+4. Нажмите `Add Preset`.
+
+`Basic Needs` создаёт связанные Facts, Actions и Goals для голода и усталости, Profile с начальными `Is Hungry = True` и `Is Tired = True`, агента, еду и кровать. После запуска NPC сначала найдёт еду, поест, затем займёт кровать и отдохнёт.
+
+`Resource Gathering` создаёт Facts доступности и количества ресурса, Action с резервированием, перемещением и добавлением предмета в Inventory, Goal, Sensors, профиль и агента с `GoapInventory`. При включённом `Resource Object` мастер создаёт столько расходуемых объектов, сколько указано в `Target Amount`, поэтому Goal сразу достижим. Поля `Smart Object Category` и `Inventory Item ID` заполняются один раз и согласованно используются во всех созданных настройках.
+
+Повторное применение того же пресета не дублирует определения: существующие Facts, Actions и Goals переиспользуются. После создания нажмите `Sort Graph`, чтобы разложить новую ветку.
+
+### Smart Object
+
+1. Перетащите существующий объект сцены в `Existing Object` или оставьте поле пустым для создания примитива.
+2. Задайте `Category`, `Capacity` и `Consume On Use`.
+3. Нажмите `Setup Selected Object` или `Create Smart Object`.
+
+`Category` должна точно совпадать со значением в шагах `Find Smart Object` и профильном `Smart Object Sensor`.
 
 ## Создание NPC через Profile
 
