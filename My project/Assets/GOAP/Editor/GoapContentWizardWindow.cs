@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,10 +12,18 @@ namespace Practice.GOAP.Editor
         private enum WizardPage
         {
             Agent,
+            Profile,
+            Sensor,
             Action,
             Goal,
             BehaviourPreset,
             SmartObject
+        }
+
+        private enum ProfileProviderMode
+        {
+            Sensor,
+            InitialFact
         }
 
         private enum ActionRecipeKind
@@ -45,6 +54,36 @@ namespace Practice.GOAP.Editor
         [SerializeField] private bool _addInventory;
         [SerializeField] private bool _addStats;
         [SerializeField] private bool _visibleAgent = true;
+
+        [SerializeField] private List<GoapGoalDefinition> _profileGoals = new();
+        [SerializeField] private bool _profileIncludeAlternatives;
+        [SerializeField] private bool _profileAllowUnresolved;
+        [SerializeField] private bool _profileCreateAgent;
+        [SerializeField] private string _profileAgentName = "Composed Agent";
+        [SerializeField] private bool _profileVisibleAgent = true;
+
+        [SerializeField] private ProfileProviderMode _providerMode;
+        [SerializeField] private GoapFact _providerFact;
+        [SerializeField] private string _sensorName = "Sensor";
+        [SerializeField] private GoapProfileSensorKind _sensorKind;
+        [SerializeField] private string _sensorSourceId = "Source";
+        [SerializeField] private string _sensorTargetId = "Target";
+        [SerializeField] private string _sensorRequiredTag = "";
+        [SerializeField] private LayerMask _sensorLayerMask = ~0;
+        [SerializeField] private float _sensorRadius = 5f;
+        [SerializeField] private GoapComparison _sensorComparison = GoapComparison.GreaterOrEqual;
+        [SerializeField] private float _sensorThreshold = 1f;
+        [SerializeField] private float _sensorScale = 1f;
+        [SerializeField] private float _sensorOffset;
+        [SerializeField] private string _sensorComponentType = "";
+        [SerializeField] private string _sensorMemberName = "";
+        [SerializeField] private GoapSensorUpdateMode _sensorUpdateMode = GoapSensorUpdateMode.EveryDecision;
+        [SerializeField] private float _sensorInterval = 0.5f;
+        [SerializeField] private bool _providerBoolean;
+        [SerializeField] private int _providerInteger;
+        [SerializeField] private float _providerFloat;
+        [SerializeField] private int _providerEnum;
+        [SerializeField] private bool _showCoveredInputs;
 
         [SerializeField] private string _actionName = "New Action";
         [SerializeField] private string _actionExecutorId = "new-action";
@@ -118,6 +157,35 @@ namespace Practice.GOAP.Editor
             OpenPage(WizardPage.Action, domain, null);
         }
 
+        public static void OpenProfile(GoapDomain domain)
+        {
+            OpenPage(WizardPage.Profile, domain, null);
+        }
+
+        public static void OpenSensors(
+            GoapAgentProfile profile,
+            GoapFact fact = null,
+            GoapCondition requirement = default,
+            GoapDefinition owner = null)
+        {
+            var window = GetWindow<GoapContentWizardWindow>();
+            window.titleContent = new GUIContent("GOAP Content");
+            window.minSize = new Vector2(500f, 570f);
+            window._page = WizardPage.Sensor;
+            window.UseProfile(profile);
+            if (fact != null)
+            {
+                window.PrepareProvider(fact, owner);
+                if (requirement.IsValid)
+                {
+                    window.SetProviderValue(CreateMatchingValue(requirement));
+                }
+            }
+
+            window.Show();
+            window.Repaint();
+        }
+
         public static void OpenGoal(GoapDomain domain)
         {
             OpenPage(WizardPage.Goal, domain, null);
@@ -154,7 +222,7 @@ namespace Practice.GOAP.Editor
             DrawHeader();
             _page = (WizardPage)GUILayout.Toolbar(
                 (int)_page,
-                new[] { "Agent", "Action", "Goal", "Presets", "Smart Object" },
+                new[] { "Agent", "Profile", "Sensors", "Action", "Goal", "Presets", "Smart" },
                 GUILayout.Height(27f));
             EditorGUILayout.Space(8f);
 
@@ -165,6 +233,12 @@ namespace Practice.GOAP.Editor
                 {
                     case WizardPage.Agent:
                         DrawAgentPage();
+                        break;
+                    case WizardPage.Profile:
+                        DrawProfilePage();
+                        break;
+                    case WizardPage.Sensor:
+                        DrawSensorPage();
                         break;
                     case WizardPage.Action:
                         DrawActionPage();
@@ -272,6 +346,443 @@ namespace Practice.GOAP.Editor
                 {
                     Run(SetupAgent);
                 }
+            }
+        }
+
+        private void DrawProfilePage()
+        {
+            DrawSectionTitle("Profile Composer");
+            var nextDomain = (GoapDomain)EditorGUILayout.ObjectField("Domain", _domain, typeof(GoapDomain), false);
+            if (nextDomain != _domain)
+            {
+                _domain = nextDomain;
+                _profileGoals.RemoveAll(goal => goal == null || _domain == null || !_domain.Goals.Contains(goal));
+            }
+
+            _profileName = EditorGUILayout.TextField("Profile Name", _profileName);
+            _profileIncludeAlternatives = EditorGUILayout.Toggle(
+                new GUIContent(
+                    "Include Alternatives",
+                    "Include every Action that can produce a requirement instead of the cheapest producer only."),
+                _profileIncludeAlternatives);
+            EditorGUILayout.Space(8f);
+            DrawSectionTitle("Goals");
+            if (_domain == null)
+            {
+                EditorGUILayout.HelpBox("Assign a Domain to select Goals.", MessageType.Info);
+            }
+            else if (_domain.Goals.All(goal => goal == null))
+            {
+                EditorGUILayout.HelpBox("This Domain has no Goals.", MessageType.Warning);
+            }
+            else
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select All"))
+                {
+                    _profileGoals = _domain.Goals.Where(goal => goal != null).ToList();
+                }
+
+                if (GUILayout.Button("Clear"))
+                {
+                    _profileGoals.Clear();
+                }
+
+                EditorGUILayout.EndHorizontal();
+                foreach (var goal in _domain.Goals.Where(goal => goal != null))
+                {
+                    var selected = _profileGoals.Contains(goal);
+                    var nextSelected = EditorGUILayout.ToggleLeft(
+                        $"{goal.DisplayName} (Priority {goal.Priority})",
+                        selected);
+                    if (nextSelected && !selected)
+                    {
+                        _profileGoals.Add(goal);
+                    }
+                    else if (!nextSelected && selected)
+                    {
+                        _profileGoals.Remove(goal);
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(10f);
+            var analysis = GoapProfileComposer.Analyze(_domain, _profileGoals, _profileIncludeAlternatives);
+            DrawProfileAnalysis(analysis);
+            if (analysis.UnresolvedFacts.Count > 0)
+            {
+                _profileAllowUnresolved = EditorGUILayout.Toggle(
+                    new GUIContent(
+                        "Allow Unresolved Facts",
+                        "Create the Profile anyway and configure these values with custom Sensors or scene components."),
+                    _profileAllowUnresolved);
+            }
+            else
+            {
+                _profileAllowUnresolved = false;
+            }
+
+            EditorGUILayout.Space(10f);
+            DrawSectionTitle("Create Together");
+            _profileCreateAgent = EditorGUILayout.Toggle("Scene Agent", _profileCreateAgent);
+            if (_profileCreateAgent)
+            {
+                _profileAgentName = EditorGUILayout.TextField("Agent Name", _profileAgentName);
+                _profileVisibleAgent = EditorGUILayout.Toggle("Visible Placeholder", _profileVisibleAgent);
+            }
+
+            EditorGUILayout.Space(12f);
+            var canCreate = analysis.CanCreateProfile &&
+                            (analysis.UnresolvedFacts.Count == 0 || _profileAllowUnresolved) &&
+                            !string.IsNullOrWhiteSpace(_profileName);
+            using (new EditorGUI.DisabledScope(!canCreate))
+            {
+                if (GUILayout.Button("Create Composed Profile", GUILayout.Height(34f)))
+                {
+                    Run(() => CreateComposedProfile(analysis));
+                }
+            }
+        }
+
+        private static void DrawProfileAnalysis(GoapProfileAnalysis analysis)
+        {
+            DrawSectionTitle("Generated Profile");
+            EditorGUILayout.LabelField("Goals", analysis.Goals.Count.ToString());
+            foreach (var goal in analysis.Goals)
+            {
+                EditorGUILayout.LabelField($"- {goal.DisplayName}", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.LabelField("Actions", analysis.Actions.Count.ToString());
+            foreach (var action in analysis.Actions)
+            {
+                EditorGUILayout.LabelField($"- {action.DisplayName} (Cost {action.Cost:0.##})", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.LabelField("Initial Facts", analysis.InitialFacts.Count.ToString());
+            foreach (var value in analysis.InitialFacts)
+            {
+                EditorGUILayout.LabelField(
+                    $"- {value.Fact.DisplayName} = {value.Fact.FormatValue(value.Value)}",
+                    EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.LabelField("Sensors", analysis.Sensors.Count.ToString());
+            foreach (var sensor in analysis.Sensors)
+            {
+                var source = string.IsNullOrWhiteSpace(sensor.SourceId) ? string.Empty : $" ({sensor.SourceId})";
+                EditorGUILayout.LabelField($"- {sensor.Kind}: {sensor.Fact.DisplayName}{source}", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.LabelField(
+                "Required Components",
+                analysis.RequiresInventory ? "GoapInventory" : "None");
+            foreach (var condition in analysis.UnreachableConditions)
+            {
+                EditorGUILayout.HelpBox($"No grounded Action chain can achieve: {condition}", MessageType.Error);
+            }
+
+            if (analysis.UnresolvedFacts.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Configure a custom Sensor or Initial Fact for: {string.Join(", ", analysis.UnresolvedFacts.Select(fact => fact.DisplayName))}",
+                    MessageType.Warning);
+            }
+
+            foreach (var warning in analysis.Warnings)
+            {
+                EditorGUILayout.HelpBox(warning, MessageType.Warning);
+            }
+        }
+
+        private void DrawSensorPage()
+        {
+            DrawSectionTitle("Profile Input Setup");
+            var nextProfile = (GoapAgentProfile)EditorGUILayout.ObjectField(
+                "Agent Profile",
+                _profile,
+                typeof(GoapAgentProfile),
+                false);
+            if (nextProfile != _profile)
+            {
+                UseProfile(nextProfile);
+            }
+
+            if (_profile == null)
+            {
+                EditorGUILayout.HelpBox("Assign an Agent Profile to inspect its input coverage.", MessageType.Info);
+                return;
+            }
+
+            if (_profile.Domain == null)
+            {
+                EditorGUILayout.HelpBox("The selected Profile has no Domain.", MessageType.Error);
+                return;
+            }
+
+            EditorGUILayout.LabelField("Domain", _profile.Domain.name);
+            var report = GoapProfileCoverageAnalyzer.Analyze(_profile);
+            DrawCoverageReport(report);
+            EditorGUILayout.Space(10f);
+            DrawCurrentProviders();
+            EditorGUILayout.Space(10f);
+            DrawProviderEditor();
+
+            if (report.RequiresInventory || report.RequiresStats || report.RequiresNamedTargets)
+            {
+                EditorGUILayout.Space(10f);
+                DrawSectionTitle("Agent Requirements");
+                if (report.RequiresInventory)
+                {
+                    EditorGUILayout.LabelField("- GoapInventory", EditorStyles.miniLabel);
+                }
+
+                if (report.RequiresStats)
+                {
+                    EditorGUILayout.LabelField("- GoapStatSource", EditorStyles.miniLabel);
+                }
+
+                if (report.RequiresNamedTargets)
+                {
+                    EditorGUILayout.LabelField("- Named Targets in GoapAgentAuthoring", EditorStyles.miniLabel);
+                }
+
+                if (GUILayout.Button("Apply Required Components to Scene Agents"))
+                {
+                    Run(SyncProfileAgents);
+                }
+            }
+        }
+
+        private void DrawCoverageReport(GoapProfileCoverageReport report)
+        {
+            DrawSectionTitle("Input Coverage");
+            var covered = report.Entries.Count(entry => entry.IsCovered);
+            var message = report.IsComplete
+                ? $"All {report.Entries.Count} inputs are covered."
+                : $"{report.MissingFacts.Count} Facts need a Sensor or Initial Fact.";
+            EditorGUILayout.HelpBox(message, report.IsComplete ? MessageType.Info : MessageType.Warning);
+            _showCoveredInputs = EditorGUILayout.ToggleLeft(
+                $"Show covered inputs ({covered})",
+                _showCoveredInputs);
+
+            var visibleEntries = report.Entries
+                .Where(entry => _showCoveredInputs || !entry.IsCovered)
+                .ToArray();
+            foreach (var entry in visibleEntries)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(
+                    $"{entry.Condition}  |  {entry.Owner.DisplayName}",
+                    EditorStyles.wordWrappedMiniLabel,
+                    GUILayout.MinWidth(240f));
+                EditorGUILayout.LabelField(
+                    $"{entry.SourceKind}: {entry.SourceName}",
+                    EditorStyles.miniLabel,
+                    GUILayout.Width(150f));
+                if (!entry.IsCovered && GUILayout.Button("Configure", GUILayout.Width(78f)))
+                {
+                    PrepareProvider(entry);
+                    GUI.FocusControl(null);
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawCurrentProviders()
+        {
+            DrawSectionTitle("Current Providers");
+            if (_profile.Sensors.Count == 0 && _profile.InitialFacts.Count == 0)
+            {
+                EditorGUILayout.HelpBox("This Profile has no Sensors or Initial Facts.", MessageType.Info);
+            }
+
+            foreach (var sensor in _profile.Sensors.Where(sensor => sensor != null).ToArray())
+            {
+                EditorGUILayout.BeginHorizontal();
+                var source = string.IsNullOrWhiteSpace(sensor.SourceId) ? string.Empty : $" ({sensor.SourceId})";
+                EditorGUILayout.LabelField(
+                    $"Sensor  |  {sensor.Fact.DisplayName}  |  {sensor.Kind}{source}",
+                    EditorStyles.miniLabel);
+                if (GUILayout.Button("Edit", GUILayout.Width(48f)))
+                {
+                    LoadSensor(sensor);
+                }
+
+                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
+                {
+                    Run(() => GoapContentCreationService.RemoveProfileSensor(_profile, sensor.Fact));
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            foreach (var value in _profile.InitialFacts.Where(value => value.IsValid).ToArray())
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(
+                    $"Initial  |  {value.Fact.DisplayName} = {value.Fact.FormatValue(value.Value)}",
+                    EditorStyles.miniLabel);
+                if (GUILayout.Button("Edit", GUILayout.Width(48f)))
+                {
+                    LoadInitialFact(value);
+                }
+
+                if (GUILayout.Button("Remove", GUILayout.Width(62f)))
+                {
+                    Run(() => GoapContentCreationService.RemoveProfileInitialFact(_profile, value.Fact));
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawProviderEditor()
+        {
+            DrawSectionTitle("Provider Editor");
+            _providerMode = (ProfileProviderMode)GUILayout.Toolbar(
+                (int)_providerMode,
+                new[] { "Sensor", "Initial Fact" },
+                GUILayout.Height(24f));
+            var nextFact = (GoapFact)EditorGUILayout.ObjectField(
+                "Fact",
+                _providerFact,
+                typeof(GoapFact),
+                false);
+            if (nextFact != _providerFact)
+            {
+                PrepareProvider(nextFact, null);
+            }
+
+            if (_providerFact == null)
+            {
+                EditorGUILayout.HelpBox("Select a Fact or use Configure in the coverage list.", MessageType.Info);
+                return;
+            }
+
+            if (!_profile.Domain.Facts.Contains(_providerFact))
+            {
+                EditorGUILayout.HelpBox("The selected Fact belongs to another Domain.", MessageType.Error);
+                return;
+            }
+
+            if (_providerMode == ProfileProviderMode.InitialFact)
+            {
+                DrawProviderValue(_providerFact, "Value");
+                var replacing = _profile.InitialFacts.Any(value => value.Fact == _providerFact);
+                if (GUILayout.Button(replacing ? "Replace Initial Fact" : "Add Initial Fact", GUILayout.Height(30f)))
+                {
+                    Run(SaveInitialFact);
+                }
+
+                return;
+            }
+
+            DrawSensorSettings();
+            var existing = _profile.Sensors.Any(sensor => sensor != null && sensor.Fact == _providerFact);
+            using (new EditorGUI.DisabledScope(!CanSaveSensor()))
+            {
+                if (GUILayout.Button(existing ? "Replace Sensor" : "Add Sensor", GUILayout.Height(30f)))
+                {
+                    Run(SaveSensor);
+                }
+            }
+        }
+
+        private void DrawSensorSettings()
+        {
+            _sensorName = EditorGUILayout.TextField("Name", _sensorName);
+            _sensorKind = (GoapProfileSensorKind)EditorGUILayout.EnumPopup("Source", _sensorKind);
+            switch (_sensorKind)
+            {
+                case GoapProfileSensorKind.SmartObject:
+                    _sensorSourceId = EditorGUILayout.TextField("Category", _sensorSourceId);
+                    _sensorRadius = EditorGUILayout.FloatField("Max Distance (0 = Any)", Mathf.Max(0f, _sensorRadius));
+                    break;
+                case GoapProfileSensorKind.Inventory:
+                    _sensorSourceId = EditorGUILayout.TextField("Item ID", _sensorSourceId);
+                    break;
+                case GoapProfileSensorKind.Distance:
+                    _sensorTargetId = EditorGUILayout.TextField("Named Target ID", _sensorTargetId);
+                    break;
+                case GoapProfileSensorKind.Proximity:
+                    _sensorRadius = EditorGUILayout.FloatField("Radius", Mathf.Max(0f, _sensorRadius));
+                    _sensorLayerMask = LayerMaskField("Layer Mask", _sensorLayerMask);
+                    _sensorRequiredTag = EditorGUILayout.TextField("Tag (optional)", _sensorRequiredTag);
+                    break;
+                case GoapProfileSensorKind.Stat:
+                    _sensorSourceId = EditorGUILayout.TextField("Stat ID", _sensorSourceId);
+                    break;
+                case GoapProfileSensorKind.Time:
+                    break;
+                case GoapProfileSensorKind.ComponentProperty:
+                    _sensorTargetId = EditorGUILayout.TextField("Named Target ID (optional)", _sensorTargetId);
+                    _sensorComponentType = EditorGUILayout.TextField("Component Type", _sensorComponentType);
+                    _sensorMemberName = EditorGUILayout.TextField("Property / Field", _sensorMemberName);
+                    if (!string.IsNullOrWhiteSpace(_sensorComponentType) &&
+                        !string.IsNullOrWhiteSpace(_sensorMemberName) &&
+                        !TryResolveComponentMember(_sensorComponentType, _sensorMemberName, out _))
+                    {
+                        EditorGUILayout.HelpBox(
+                            "The Component type or readable field/property could not be found.",
+                            MessageType.Error);
+                    }
+                    break;
+                case GoapProfileSensorKind.Constant:
+                    DrawProviderValue(_providerFact, "Constant Value");
+                    break;
+            }
+
+            if (_sensorKind != GoapProfileSensorKind.ComponentProperty &&
+                _sensorKind != GoapProfileSensorKind.Constant)
+            {
+                _sensorScale = EditorGUILayout.FloatField("Scale", _sensorScale);
+                _sensorOffset = EditorGUILayout.FloatField("Offset", _sensorOffset);
+                if (_providerFact.ValueType == GoapFactType.Boolean)
+                {
+                    _sensorComparison = (GoapComparison)EditorGUILayout.EnumPopup(
+                        "Boolean Comparison",
+                        _sensorComparison);
+                    _sensorThreshold = EditorGUILayout.FloatField("Boolean Threshold", _sensorThreshold);
+                }
+            }
+
+            _sensorUpdateMode = (GoapSensorUpdateMode)EditorGUILayout.EnumPopup(
+                "Update Mode",
+                _sensorUpdateMode);
+            if (_sensorUpdateMode == GoapSensorUpdateMode.Interval)
+            {
+                _sensorInterval = EditorGUILayout.FloatField("Interval", Mathf.Max(0.05f, _sensorInterval));
+            }
+            else if (_sensorUpdateMode == GoapSensorUpdateMode.Manual ||
+                     _sensorUpdateMode == GoapSensorUpdateMode.Event)
+            {
+                EditorGUILayout.HelpBox(
+                    "Call RequestSensor or RequestAllSensors on GoapProfileSensorBehaviour when the source changes.",
+                    MessageType.Info);
+            }
+        }
+
+        private void DrawProviderValue(GoapFact fact, string label)
+        {
+            switch (fact.ValueType)
+            {
+                case GoapFactType.Integer:
+                    _providerInteger = EditorGUILayout.IntField(label, _providerInteger);
+                    break;
+                case GoapFactType.Float:
+                    _providerFloat = EditorGUILayout.FloatField(label, _providerFloat);
+                    break;
+                case GoapFactType.Enum:
+                    _providerEnum = EditorGUILayout.Popup(
+                        label,
+                        fact.NormalizeEnumIndex(_providerEnum),
+                        fact.EnumOptions.ToArray());
+                    break;
+                default:
+                    _providerBoolean = EditorGUILayout.Toggle(label, _providerBoolean);
+                    break;
             }
         }
 
@@ -853,6 +1364,44 @@ namespace Practice.GOAP.Editor
             };
         }
 
+        private void CreateComposedProfile(GoapProfileAnalysis analysis)
+        {
+            var profile = GoapContentCreationService.CreateProfile(
+                _domain,
+                _profileName,
+                analysis.Actions,
+                analysis.Goals,
+                analysis.InitialFacts,
+                analysis.Sensors);
+            UseProfile(profile);
+            if (_profileCreateAgent)
+            {
+                var agent = GoapContentCreationService.CreateAgent(
+                    _profileAgentName,
+                    profile,
+                    analysis.RequiresInventory,
+                    false,
+                    _profileVisibleAgent,
+                    GetSceneCreationPosition());
+                _agentTarget = agent;
+                Selection.activeGameObject = agent;
+                _status = $"Profile '{profile.name}' and agent '{agent.name}' were created.";
+            }
+            else
+            {
+                Selection.activeObject = profile;
+                EditorGUIUtility.PingObject(profile);
+                _status = $"Profile '{profile.name}' was created with {analysis.Actions.Count} Actions and {analysis.Sensors.Count} Sensors.";
+            }
+
+            if (analysis.UnresolvedFacts.Count > 0)
+            {
+                _page = WizardPage.Sensor;
+                PrepareProvider(analysis.UnresolvedFacts[0], null);
+                _status += " Configure the remaining input Facts below.";
+            }
+        }
+
         private void SetupAgent()
         {
             var profile = ResolveProfile();
@@ -875,6 +1424,303 @@ namespace Practice.GOAP.Editor
 
             Selection.activeGameObject = gameObject;
             _status = $"'{gameObject.name}' is ready with profile '{profile.name}'.";
+        }
+
+        private void PrepareProvider(GoapProfileCoverageEntry entry)
+        {
+            PrepareProvider(entry.Condition.Fact, entry.Owner);
+            SetProviderValue(CreateMatchingValue(entry.Condition));
+        }
+
+        private void PrepareProvider(GoapFact fact, GoapDefinition owner)
+        {
+            _providerFact = fact;
+            if (fact == null)
+            {
+                return;
+            }
+
+            _providerMode = ProfileProviderMode.Sensor;
+            _sensorName = $"{fact.DisplayName} Sensor";
+            _sensorKind = GoapProfileSensorKind.Constant;
+            _sensorSourceId = fact.DisplayName;
+            _sensorTargetId = "Target";
+            _sensorRequiredTag = string.Empty;
+            _sensorLayerMask = ~0;
+            _sensorRadius = 5f;
+            _sensorComparison = GoapComparison.GreaterOrEqual;
+            _sensorThreshold = 1f;
+            _sensorScale = 1f;
+            _sensorOffset = 0f;
+            _sensorComponentType = string.Empty;
+            _sensorMemberName = string.Empty;
+            _sensorUpdateMode = GoapSensorUpdateMode.EveryDecision;
+            _sensorInterval = 0.5f;
+            SetProviderValue(fact.DefaultTypedValue);
+
+            var ownerAction = owner as GoapActionDefinition;
+            var findStep = ownerAction?.ExecutionSteps.FirstOrDefault(step =>
+                step != null && step.Kind == GoapActionStepKind.FindSmartObject);
+            var inventoryStep = ownerAction?.ExecutionSteps.FirstOrDefault(step =>
+                step != null &&
+                (step.Kind == GoapActionStepKind.InventoryAdd ||
+                 step.Kind == GoapActionStepKind.InventoryRemove));
+            var moveStep = ownerAction?.ExecutionSteps.FirstOrDefault(step =>
+                step != null &&
+                step.Kind == GoapActionStepKind.MoveToTarget &&
+                !string.IsNullOrWhiteSpace(step.TargetId));
+            var factName = fact.DisplayName;
+            if (findStep != null)
+            {
+                _sensorKind = GoapProfileSensorKind.SmartObject;
+                _sensorSourceId = findStep.TargetCategory;
+                _sensorRadius = 0f;
+            }
+            else if (inventoryStep != null && fact.ValueType != GoapFactType.Boolean)
+            {
+                _sensorKind = GoapProfileSensorKind.Inventory;
+                _sensorSourceId = inventoryStep.ItemId;
+            }
+            else if (factName.IndexOf("available", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     factName.IndexOf("visible", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     factName.IndexOf("nearby", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _sensorKind = GoapProfileSensorKind.SmartObject;
+                _sensorSourceId = RemoveSourceSuffix(factName);
+                _sensorRadius = 0f;
+            }
+            else if (factName.IndexOf("count", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                     fact.ValueType != GoapFactType.Boolean)
+            {
+                _sensorKind = GoapProfileSensorKind.Inventory;
+                _sensorSourceId = RemoveSourceSuffix(factName);
+            }
+            else if (factName.IndexOf("distance", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _sensorKind = GoapProfileSensorKind.Distance;
+                _sensorTargetId = moveStep?.TargetId ?? "Target";
+                _sensorComparison = GoapComparison.LessOrEqual;
+            }
+            else if (factName.IndexOf("time", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     factName.IndexOf("day", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _sensorKind = GoapProfileSensorKind.Time;
+            }
+            else if (factName.IndexOf("health", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     factName.IndexOf("stamina", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     factName.IndexOf("energy", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _sensorKind = GoapProfileSensorKind.Stat;
+                _sensorSourceId = factName.Replace("Is ", string.Empty).Trim();
+            }
+        }
+
+        private void LoadSensor(GoapProfileSensorDefinition sensor)
+        {
+            _providerMode = ProfileProviderMode.Sensor;
+            _providerFact = sensor.Fact;
+            _sensorName = sensor.Name;
+            _sensorKind = sensor.Kind;
+            _sensorSourceId = sensor.SourceId;
+            _sensorTargetId = sensor.TargetId;
+            _sensorRequiredTag = sensor.RequiredTag;
+            _sensorLayerMask = sensor.LayerMask;
+            _sensorRadius = sensor.Radius;
+            _sensorComparison = sensor.Comparison;
+            _sensorThreshold = sensor.Threshold;
+            _sensorScale = sensor.Scale;
+            _sensorOffset = sensor.Offset;
+            _sensorComponentType = sensor.ComponentType;
+            _sensorMemberName = sensor.MemberName;
+            _sensorUpdateMode = sensor.UpdateMode;
+            _sensorInterval = sensor.Interval;
+            if (sensor.Kind == GoapProfileSensorKind.Constant && sensor.ConstantValue.IsValid)
+            {
+                SetProviderValue(sensor.ConstantValue.Value);
+            }
+        }
+
+        private void LoadInitialFact(GoapFactValueReference value)
+        {
+            _providerMode = ProfileProviderMode.InitialFact;
+            _providerFact = value.Fact;
+            SetProviderValue(value.Value);
+        }
+
+        private void SaveSensor()
+        {
+            var sensor = new GoapProfileSensorDefinition(
+                _sensorName,
+                _sensorKind,
+                _providerFact,
+                _sensorSourceId,
+                _sensorTargetId,
+                _sensorThreshold,
+                _sensorComparison,
+                _sensorUpdateMode,
+                _sensorInterval);
+            sensor.ConfigureValueTransform(_sensorScale, _sensorOffset);
+            switch (_sensorKind)
+            {
+                case GoapProfileSensorKind.SmartObject:
+                    sensor.ConfigureRange(_sensorRadius);
+                    break;
+                case GoapProfileSensorKind.Proximity:
+                    sensor.ConfigureProximity(_sensorRadius, _sensorLayerMask, _sensorRequiredTag);
+                    break;
+                case GoapProfileSensorKind.ComponentProperty:
+                    sensor.ConfigureProperty(_sensorComponentType, _sensorMemberName);
+                    break;
+                case GoapProfileSensorKind.Constant:
+                    sensor.ConfigureConstant(CreateProviderValue());
+                    break;
+            }
+
+            GoapContentCreationService.SetProfileSensor(_profile, sensor);
+            Selection.activeObject = _profile;
+            _status = $"Sensor '{sensor.Name}' now provides '{_providerFact.DisplayName}'.";
+        }
+
+        private void SaveInitialFact()
+        {
+            var value = CreateProviderValue();
+            GoapContentCreationService.SetProfileInitialFact(_profile, value);
+            Selection.activeObject = _profile;
+            _status = $"Initial Fact '{_providerFact.DisplayName}' was updated.";
+        }
+
+        private void SyncProfileAgents()
+        {
+            var updated = GoapContentCreationService.SyncProfileSceneAgents(_profile);
+            _status = updated == 0
+                ? "No loaded scene agents use this Profile."
+                : $"Updated required components on {updated} scene agent(s).";
+        }
+
+        private bool CanSaveSensor()
+        {
+            if (_profile == null || _profile.Domain == null || _providerFact == null ||
+                !_profile.Domain.Facts.Contains(_providerFact) ||
+                string.IsNullOrWhiteSpace(_sensorName))
+            {
+                return false;
+            }
+
+            return _sensorKind switch
+            {
+                GoapProfileSensorKind.SmartObject => !string.IsNullOrWhiteSpace(_sensorSourceId),
+                GoapProfileSensorKind.Inventory => !string.IsNullOrWhiteSpace(_sensorSourceId),
+                GoapProfileSensorKind.Distance => !string.IsNullOrWhiteSpace(_sensorTargetId),
+                GoapProfileSensorKind.Proximity => _sensorRadius > 0f,
+                GoapProfileSensorKind.Stat => !string.IsNullOrWhiteSpace(_sensorSourceId),
+                GoapProfileSensorKind.ComponentProperty =>
+                    TryResolveComponentMember(_sensorComponentType, _sensorMemberName, out _),
+                _ => true
+            };
+        }
+
+        private GoapFactValueReference CreateProviderValue()
+        {
+            return _providerFact.ValueType switch
+            {
+                GoapFactType.Integer => new GoapFactValueReference(_providerFact, _providerInteger),
+                GoapFactType.Float => new GoapFactValueReference(_providerFact, _providerFloat),
+                GoapFactType.Enum => new GoapFactValueReference(_providerFact, _providerEnum, true),
+                _ => new GoapFactValueReference(_providerFact, _providerBoolean)
+            };
+        }
+
+        private void SetProviderValue(GoapValue value)
+        {
+            if (_providerFact == null)
+            {
+                return;
+            }
+
+            value = value.ConvertTo(_providerFact.ValueType);
+            _providerBoolean = value.Boolean;
+            _providerInteger = value.Integer;
+            _providerFloat = value.Float;
+            _providerEnum = value.Integer;
+        }
+
+        private static GoapValue CreateMatchingValue(GoapCondition condition)
+        {
+            var expected = condition.ExpectedValue;
+            if (condition.Fact.ValueType == GoapFactType.Boolean)
+            {
+                return GoapValue.From(condition.Comparison == GoapComparison.NotEqual
+                    ? !expected.Boolean
+                    : expected.Boolean);
+            }
+
+            if (condition.Fact.ValueType == GoapFactType.Float)
+            {
+                var value = expected.Float;
+                value += condition.Comparison == GoapComparison.Greater ? 1f :
+                    condition.Comparison == GoapComparison.Less ? -1f :
+                    condition.Comparison == GoapComparison.NotEqual ? 1f : 0f;
+                return GoapValue.From(value);
+            }
+
+            var integer = expected.Integer;
+            integer += condition.Comparison == GoapComparison.Greater ? 1 :
+                condition.Comparison == GoapComparison.Less ? -1 :
+                condition.Comparison == GoapComparison.NotEqual ? 1 : 0;
+            return condition.Fact.ValueType == GoapFactType.Enum
+                ? GoapValue.FromEnum(condition.Fact.NormalizeEnumIndex(integer))
+                : GoapValue.From(integer);
+        }
+
+        private static LayerMask LayerMaskField(string label, LayerMask value)
+        {
+            var layerNames = Enumerable.Range(0, 32)
+                .Select(index =>
+                {
+                    var name = LayerMask.LayerToName(index);
+                    return string.IsNullOrWhiteSpace(name) ? $"Layer {index}" : name;
+                })
+                .ToArray();
+            return EditorGUILayout.MaskField(label, value.value, layerNames);
+        }
+
+        private static string RemoveSourceSuffix(string displayName)
+        {
+            var suffixes = new[] { " Available", " Visible", " Nearby", " Count" };
+            foreach (var suffix in suffixes)
+            {
+                if (displayName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return displayName.Substring(0, displayName.Length - suffix.Length).Trim();
+                }
+            }
+
+            return displayName.Trim();
+        }
+
+        private static bool TryResolveComponentMember(
+            string componentTypeName,
+            string memberName,
+            out Type componentType)
+        {
+            componentType = null;
+            if (string.IsNullOrWhiteSpace(componentTypeName) || string.IsNullOrWhiteSpace(memberName))
+            {
+                return false;
+            }
+
+            componentType = Type.GetType(componentTypeName) ??
+                            TypeCache.GetTypesDerivedFrom<Component>().FirstOrDefault(type =>
+                                string.Equals(type.FullName, componentTypeName, StringComparison.Ordinal) ||
+                                string.Equals(type.Name, componentTypeName, StringComparison.Ordinal));
+            if (componentType == null)
+            {
+                return false;
+            }
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            var property = componentType.GetProperty(memberName, flags);
+            return property?.CanRead == true || componentType.GetField(memberName, flags) != null;
         }
 
         private void AddPreset()
@@ -1028,6 +1874,23 @@ namespace Practice.GOAP.Editor
             return (_profile != null && _profile.Domain != null) || (_profile == null && _domain != null);
         }
 
+        private void UseProfile(GoapAgentProfile profile)
+        {
+            _profile = profile;
+            if (_profile == null)
+            {
+                _providerFact = null;
+                return;
+            }
+
+            _domain = _profile.Domain;
+            _profileName = _profile.name;
+            if (_providerFact != null && (_domain == null || !_domain.Facts.Contains(_providerFact)))
+            {
+                _providerFact = null;
+            }
+        }
+
         private void UseAgentTarget(GameObject target)
         {
             _agentTarget = target;
@@ -1040,9 +1903,7 @@ namespace Practice.GOAP.Editor
             var authoring = _agentTarget.GetComponent<GoapAgentAuthoring>();
             if (authoring?.Profile != null)
             {
-                _profile = authoring.Profile;
-                _domain = _profile.Domain;
-                _profileName = _profile.name;
+                UseProfile(authoring.Profile);
             }
 
             _addInventory = _agentTarget.GetComponent<GoapInventory>() != null;

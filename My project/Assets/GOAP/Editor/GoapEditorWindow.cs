@@ -70,6 +70,11 @@ namespace Practice.GOAP.Editor
                 text = "Content Wizard",
                 tooltip = "Create agents, behaviour presets, profiles, and Smart Objects."
             });
+            toolbar.Add(new ToolbarButton(() => GoapContentWizardWindow.OpenProfile(_domain))
+            {
+                text = "Compose Profile",
+                tooltip = "Build a focused Agent Profile from selected Goals and their dependencies."
+            });
             toolbar.Add(new ToolbarButton(Save) { text = "Save" });
             toolbar.Add(new ToolbarButton(ValidateDomain) { text = "Validate" });
             toolbar.Add(new ToolbarButton(GoapRuntimeDebuggerWindow.Open) { text = "Debugger" });
@@ -661,20 +666,25 @@ namespace Practice.GOAP.Editor
                 return;
             }
 
-            var issues = GoapDomainValidator.Validate(_domain);
+            var issues = GoapEditorDomainValidator.Validate(_domain);
             _graphView?.SetValidationIssues(issues);
             _validationList?.Clear();
             var errors = issues.Count(issue => issue.Severity == GoapValidationSeverity.Error);
             var warnings = issues.Count(issue => issue.Severity == GoapValidationSeverity.Warning);
-            if (issues.Count == 0)
+            var information = issues.Count(issue => issue.Severity == GoapValidationSeverity.Info);
+            if (errors == 0 && warnings == 0)
             {
-                _validationBox.text = "Domain is valid.";
+                _validationBox.text = information == 0
+                    ? "Domain is valid."
+                    : $"Domain is valid. {information} info.";
                 _validationBox.messageType = HelpBoxMessageType.Info;
-                return;
+            }
+            else
+            {
+                _validationBox.text = $"{errors} errors, {warnings} warnings, {information} info";
+                _validationBox.messageType = errors > 0 ? HelpBoxMessageType.Error : HelpBoxMessageType.Warning;
             }
 
-            _validationBox.text = $"{errors} errors, {warnings} warnings";
-            _validationBox.messageType = errors > 0 ? HelpBoxMessageType.Error : HelpBoxMessageType.Warning;
             foreach (var issue in issues)
             {
                 var row = new VisualElement
@@ -739,7 +749,7 @@ namespace Practice.GOAP.Editor
                     });
                     break;
                 case GoapValidationFixKind.OpenSensor:
-                    OpenProfileForDomain();
+                    OpenSensorForDomain(issue);
                     break;
             }
 
@@ -747,12 +757,17 @@ namespace Practice.GOAP.Editor
             RefreshAll();
         }
 
-        private void OpenProfileForDomain()
+        private void OpenSensorForDomain(GoapValidationIssue issue)
         {
-            var profile = AssetDatabase.FindAssets("t:GoapAgentProfile")
+            var profiles = AssetDatabase.FindAssets("t:GoapAgentProfile")
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Select(AssetDatabase.LoadAssetAtPath<GoapAgentProfile>)
-                .FirstOrDefault(item => item != null && item.Domain == _domain);
+                .Where(item => item != null && item.Domain == _domain)
+                .ToArray();
+            var profile = issue.Source is GoapActionDefinition action
+                ? profiles.FirstOrDefault(item => item.Actions.Contains(action))
+                : null;
+            profile ??= profiles.FirstOrDefault();
             if (profile == null)
             {
                 var domainPath = AssetDatabase.GetAssetPath(_domain);
@@ -765,8 +780,11 @@ namespace Practice.GOAP.Editor
                 AssetDatabase.SaveAssets();
             }
 
-            Selection.activeObject = profile;
-            EditorGUIUtility.PingObject(profile);
+            GoapContentWizardWindow.OpenSensors(
+                profile,
+                issue.RelatedCondition.IsValid ? issue.RelatedCondition.Fact : null,
+                issue.RelatedCondition,
+                issue.Source);
         }
 
         private static GoapCondition CreateEstablishingEffect(GoapCondition desired)

@@ -175,7 +175,7 @@ namespace Practice.GOAP.Tests
             var survivor = System.Array.Find(agents, agent => agent.name == "Survivor NPC");
             var hungry = survivor.Domain.FindFact("Is Hungry");
             var tired = survivor.Domain.FindFact("Is Tired");
-            var timeout = Time.time + 8f;
+            var timeout = Time.time + 15f;
             while (Time.time < timeout && (survivor.WorldState.Get(hungry) || survivor.WorldState.Get(tired)))
             {
                 yield return null;

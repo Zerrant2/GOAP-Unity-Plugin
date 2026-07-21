@@ -58,6 +58,121 @@ namespace Practice.GOAP.Tests
             Assert.That(profile.InitialFacts, Has.Count.EqualTo(2));
             Assert.That(profile.Sensors, Has.Count.EqualTo(2));
             Assert.That(profile.InitialFacts.All(value => value.Value.Boolean), Is.True);
+            Assert.That(GoapProfileCoverageAnalyzer.Analyze(profile).IsComplete, Is.True);
+            Assert.That(
+                GoapEditorDomainValidator.Validate(domain)
+                    .Where(issue => issue.Severity == GoapValidationSeverity.Warning),
+                Is.Empty);
+        }
+
+        [Test]
+        public void EditorValidationKeepsWarningForMissingProfileValueProvider()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddBasicNeedsPreset(domain);
+            var profile = GoapContentCreationService.CreateProfile(
+                domain,
+                "Unconfigured Needs Profile",
+                preset.Actions,
+                preset.Goals,
+                null,
+                null);
+
+            var warnings = GoapEditorDomainValidator.Validate(domain)
+                .Where(issue => issue.Severity == GoapValidationSeverity.Warning)
+                .ToArray();
+
+            Assert.That(warnings, Is.Not.Empty);
+            Assert.That(warnings.All(issue => issue.FixKind == GoapValidationFixKind.OpenSensor), Is.True);
+            Assert.That(warnings.Any(issue => issue.Message.Contains(profile.name)), Is.True);
+        }
+
+        [Test]
+        public void EditorValidationTreatsUnassignedActionCoverageAsInformation()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddBasicNeedsPreset(domain);
+            GoapContentCreationService.CreateProfile(domain, "Basic Needs Profile", preset);
+            var unusedAction = GoapContentCreationService.CreateAction(
+                domain,
+                "Inspect Food",
+                1f,
+                "inspect-food",
+                new[] { new GoapCondition(domain.FindFact("Food Available"), true) },
+                new[] { new GoapCondition(domain.FindFact("Has Food"), true) },
+                new[] { GoapActionStep.Wait(0.1f) });
+
+            var issues = GoapEditorDomainValidator.Validate(domain)
+                .Where(issue => issue.Source == unusedAction)
+                .ToArray();
+
+            Assert.That(issues.Any(issue => issue.Severity == GoapValidationSeverity.Warning), Is.False);
+            Assert.That(issues.Any(issue => issue.Severity == GoapValidationSeverity.Info), Is.True);
+        }
+
+        [Test]
+        public void ProfileProvidersCanBeReplacedRemovedAndAnalyzed()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddBasicNeedsPreset(domain);
+            var profile = GoapContentCreationService.CreateProfile(domain, "Needs Profile", preset);
+            var foodAvailable = domain.FindFact("Food Available");
+            var hungry = domain.FindFact("Is Hungry");
+
+            GoapContentCreationService.RemoveProfileSensor(profile, foodAvailable);
+            var missingSensor = GoapProfileCoverageAnalyzer.Analyze(profile);
+            Assert.That(missingSensor.IsComplete, Is.False);
+            Assert.That(missingSensor.MissingFacts, Does.Contain(foodAvailable));
+
+            var replacement = new GoapProfileSensorDefinition(
+                "Food Constant",
+                GoapProfileSensorKind.Constant,
+                foodAvailable);
+            replacement.ConfigureConstant(new GoapFactValueReference(foodAvailable, true));
+            GoapContentCreationService.SetProfileSensor(profile, replacement);
+            Assert.That(profile.Sensors.Count(sensor => sensor.Fact == foodAvailable), Is.EqualTo(1));
+            Assert.That(GoapProfileCoverageAnalyzer.Analyze(profile).IsComplete, Is.True);
+
+            GoapContentCreationService.SetProfileInitialFact(
+                profile,
+                new GoapFactValueReference(hungry, false));
+            Assert.That(GoapProfileCoverageAnalyzer.Analyze(profile).MissingFacts, Does.Contain(hungry));
+            GoapContentCreationService.SetProfileInitialFact(
+                profile,
+                new GoapFactValueReference(hungry, true));
+            Assert.That(GoapProfileCoverageAnalyzer.Analyze(profile).IsComplete, Is.True);
+        }
+
+        [Test]
+        public void SyncProfileSceneAgentsAddsRequiredSources()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddResourceGatheringPreset(
+                domain,
+                "Stone",
+                "Rock",
+                "Stone",
+                1,
+                30);
+            var profile = GoapContentCreationService.CreateProfile(domain, "Miner Profile", preset);
+            var agent = new GameObject("Miner");
+            SceneManager.MoveGameObjectToScene(agent, _testScene);
+
+            try
+            {
+                GoapContentCreationService.SetupAgent(agent, profile, false, false);
+                Assert.That(agent.GetComponent<GoapInventory>(), Is.Null);
+
+                var updated = GoapContentCreationService.SyncProfileSceneAgents(profile);
+
+                Assert.That(updated, Is.EqualTo(1));
+                Assert.That(agent.GetComponent<GoapInventory>(), Is.Not.Null);
+                Assert.That(GoapProfileCoverageAnalyzer.Analyze(profile).RequiresInventory, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(agent);
+            }
         }
 
         [Test]
@@ -190,6 +305,132 @@ namespace Practice.GOAP.Tests
                 null,
                 new[] { new GoapCondition(available, false) },
                 new[] { GoapActionStep.Wait(0.1f) }));
+        }
+
+        [Test]
+        public void ProfileComposerFindsBasicNeedsDependencies()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddBasicNeedsPreset(domain);
+
+            var analysis = GoapProfileComposer.Analyze(domain, preset.Goals);
+
+            Assert.That(analysis.CanCreateProfile, Is.True);
+            Assert.That(analysis.Goals.Count, Is.EqualTo(2));
+            Assert.That(analysis.Actions.Count, Is.EqualTo(3));
+            Assert.That(analysis.InitialFacts.Count, Is.EqualTo(2));
+            Assert.That(analysis.Sensors.Count, Is.EqualTo(2));
+            Assert.That(analysis.UnreachableConditions, Is.Empty);
+            Assert.That(analysis.UnresolvedFacts, Is.Empty);
+            Assert.That(analysis.RequiresInventory, Is.False);
+            Assert.That(analysis.Sensors.Select(sensor => sensor.Kind),
+                Is.All.EqualTo(GoapProfileSensorKind.SmartObject));
+        }
+
+        [Test]
+        public void ProfileComposerInfersResourceSensorsAndCreatesProfile()
+        {
+            var domain = CreateDomain();
+            var preset = GoapContentCreationService.AddResourceGatheringPreset(
+                domain,
+                "Stone",
+                "Rock",
+                "Stone",
+                2,
+                35);
+            var analysis = GoapProfileComposer.Analyze(domain, preset.Goals);
+
+            var profile = GoapContentCreationService.CreateProfile(
+                domain,
+                "Composed Miner Profile",
+                analysis.Actions,
+                analysis.Goals,
+                analysis.InitialFacts,
+                analysis.Sensors);
+
+            Assert.That(analysis.CanCreateProfile, Is.True);
+            Assert.That(analysis.Actions.Count, Is.EqualTo(1));
+            Assert.That(analysis.Sensors.Count, Is.EqualTo(2));
+            Assert.That(analysis.Sensors.Select(sensor => sensor.Kind),
+                Is.EquivalentTo(new[]
+                {
+                    GoapProfileSensorKind.SmartObject,
+                    GoapProfileSensorKind.Inventory
+                }));
+            Assert.That(analysis.RequiresInventory, Is.True);
+            Assert.That(analysis.UnresolvedFacts, Is.Empty);
+            Assert.That(profile.Actions, Has.Count.EqualTo(1));
+            Assert.That(profile.Goals, Has.Count.EqualTo(1));
+            Assert.That(profile.Sensors, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void ProfileComposerRejectsGoalWithoutProducer()
+        {
+            var domain = CreateDomain();
+            var rescued = GoapContentCreationService.CreateFact(
+                domain,
+                "Civilian Rescued",
+                GoapFactType.Boolean,
+                GoapValue.From(false));
+            var goal = GoapContentCreationService.CreateGoal(
+                domain,
+                "Rescue Civilian",
+                50,
+                null,
+                new[] { new GoapCondition(rescued, true) });
+
+            var analysis = GoapProfileComposer.Analyze(domain, new[] { goal });
+
+            Assert.That(analysis.CanCreateProfile, Is.False);
+            Assert.That(analysis.Actions, Is.Empty);
+            Assert.That(analysis.UnreachableConditions.Count, Is.EqualTo(1));
+            Assert.That(analysis.UnreachableConditions.Single().Fact, Is.SameAs(rescued));
+        }
+
+        [Test]
+        public void ProfileComposerRejectsCausalActionCycleWithoutStartingFact()
+        {
+            var domain = CreateDomain();
+            var alpha = GoapContentCreationService.CreateFact(
+                domain,
+                "Alpha Ready",
+                GoapFactType.Boolean,
+                GoapValue.From(false));
+            var beta = GoapContentCreationService.CreateFact(
+                domain,
+                "Beta Ready",
+                GoapFactType.Boolean,
+                GoapValue.From(false));
+            GoapContentCreationService.CreateAction(
+                domain,
+                "Prepare Alpha",
+                1f,
+                "prepare-alpha",
+                new[] { new GoapCondition(beta, true) },
+                new[] { new GoapCondition(alpha, true) },
+                new[] { GoapActionStep.Wait(0.1f) });
+            GoapContentCreationService.CreateAction(
+                domain,
+                "Prepare Beta",
+                1f,
+                "prepare-beta",
+                new[] { new GoapCondition(alpha, true) },
+                new[] { new GoapCondition(beta, true) },
+                new[] { GoapActionStep.Wait(0.1f) });
+            var goal = GoapContentCreationService.CreateGoal(
+                domain,
+                "Reach Alpha",
+                10,
+                null,
+                new[] { new GoapCondition(alpha, true) });
+
+            var analysis = GoapProfileComposer.Analyze(domain, new[] { goal });
+
+            Assert.That(analysis.Actions.Count, Is.EqualTo(2));
+            Assert.That(analysis.CanCreateProfile, Is.False);
+            Assert.That(analysis.UnreachableConditions.Count, Is.EqualTo(1));
+            Assert.That(analysis.UnreachableConditions.Single().Fact, Is.SameAs(alpha));
         }
 
         private GoapDomain CreateDomain()

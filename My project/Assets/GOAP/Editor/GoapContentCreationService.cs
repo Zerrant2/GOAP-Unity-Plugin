@@ -395,6 +395,34 @@ namespace Practice.GOAP.Editor
             GoapContentPresetResult preset = null,
             bool includeAllDomainContent = false)
         {
+            return CreateProfileAsset(
+                domain,
+                profileName,
+                includeAllDomainContent || preset == null ? null : preset.Actions,
+                includeAllDomainContent || preset == null ? null : preset.Goals,
+                preset?.InitialFacts,
+                preset?.Sensors);
+        }
+
+        public static GoapAgentProfile CreateProfile(
+            GoapDomain domain,
+            string profileName,
+            IEnumerable<GoapActionDefinition> actions,
+            IEnumerable<GoapGoalDefinition> goals,
+            IEnumerable<GoapFactValueReference> initialFacts,
+            IEnumerable<GoapProfileSensorDefinition> sensors)
+        {
+            return CreateProfileAsset(domain, profileName, actions, goals, initialFacts, sensors);
+        }
+
+        private static GoapAgentProfile CreateProfileAsset(
+            GoapDomain domain,
+            string profileName,
+            IEnumerable<GoapActionDefinition> actions,
+            IEnumerable<GoapGoalDefinition> goals,
+            IEnumerable<GoapFactValueReference> initialFacts,
+            IEnumerable<GoapProfileSensorDefinition> sensors)
+        {
             RequireSavedDomain(domain);
             profileName = RequireText(profileName, "Profile name");
             var domainPath = AssetDatabase.GetAssetPath(domain);
@@ -405,17 +433,67 @@ namespace Practice.GOAP.Editor
             profile.name = profileName;
             profile.Configure(
                 domain,
-                includeAllDomainContent || preset == null ? null : preset.Actions,
-                includeAllDomainContent || preset == null ? null : preset.Goals,
+                actions,
+                goals,
                 0.2f,
                 false,
-                preset?.InitialFacts,
-                preset?.Sensors);
+                initialFacts,
+                sensors);
             AssetDatabase.CreateAsset(profile, path);
             Undo.RegisterCreatedObjectUndo(profile, "Create GOAP Agent Profile");
             EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssets();
             return profile;
+        }
+
+        public static void SetProfileSensor(
+            GoapAgentProfile profile,
+            GoapProfileSensorDefinition sensor)
+        {
+            RequireProfile(profile);
+            if (sensor?.Fact == null || !profile.Domain.Facts.Contains(sensor.Fact))
+            {
+                throw new ArgumentException("The Sensor Fact must belong to the Profile Domain.", nameof(sensor));
+            }
+
+            Undo.RecordObject(profile, "Set GOAP Profile Sensor");
+            profile.SetSensor(sensor);
+            FinishProfileChange(profile);
+        }
+
+        public static void RemoveProfileSensor(GoapAgentProfile profile, GoapFact fact)
+        {
+            RequireProfile(profile);
+            Undo.RecordObject(profile, "Remove GOAP Profile Sensor");
+            if (profile.RemoveSensor(fact))
+            {
+                FinishProfileChange(profile);
+            }
+        }
+
+        public static void SetProfileInitialFact(
+            GoapAgentProfile profile,
+            GoapFactValueReference value)
+        {
+            RequireProfile(profile);
+            if (!value.IsValid || !profile.Domain.Facts.Contains(value.Fact))
+            {
+                throw new ArgumentException("The Initial Fact must belong to the Profile Domain.", nameof(value));
+            }
+
+            Undo.RecordObject(profile, "Set GOAP Initial Fact");
+            profile.SetInitialFact(value);
+            FinishProfileChange(profile);
+        }
+
+        public static void RemoveProfileInitialFact(GoapAgentProfile profile, GoapFact fact)
+        {
+            RequireProfile(profile);
+            Undo.RecordObject(profile, "Remove GOAP Initial Fact");
+            if (profile.RemoveInitialFact(fact))
+            {
+                FinishProfileChange(profile);
+            }
         }
 
         public static GoapAgentAuthoring SetupAgent(
@@ -454,6 +532,29 @@ namespace Practice.GOAP.Editor
             EditorUtility.SetDirty(authoring);
             MarkSceneDirty(gameObject);
             return authoring;
+        }
+
+        public static int SyncProfileSceneAgents(GoapAgentProfile profile)
+        {
+            RequireProfile(profile);
+            var report = GoapProfileCoverageAnalyzer.Analyze(profile);
+            var authorings = Resources.FindObjectsOfTypeAll<GoapAgentAuthoring>();
+            var updated = 0;
+            foreach (var authoring in authorings.Where(authoring =>
+                         authoring != null &&
+                         authoring.Profile == profile &&
+                         authoring.gameObject.scene.IsValid() &&
+                         authoring.gameObject.scene.isLoaded))
+            {
+                SetupAgent(
+                    authoring.gameObject,
+                    profile,
+                    report.RequiresInventory,
+                    report.RequiresStats);
+                updated++;
+            }
+
+            return updated;
         }
 
         public static GameObject CreateAgent(
@@ -687,6 +788,26 @@ namespace Practice.GOAP.Editor
                 throw new InvalidOperationException(
                     $"Fact '{fact.DisplayName}' already exists as {fact.ValueType}, but the preset requires {expected}.");
             }
+        }
+
+        private static void RequireProfile(GoapAgentProfile profile)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            if (profile.Domain == null)
+            {
+                throw new InvalidOperationException("Assign a Domain to the Agent Profile first.");
+            }
+        }
+
+        private static void FinishProfileChange(GoapAgentProfile profile)
+        {
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssetIfDirty(profile);
+            DomainChanged?.Invoke(profile.Domain);
         }
 
         private static void RequireSavedDomain(GoapDomain domain)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Practice.GOAP
@@ -50,6 +51,56 @@ namespace Practice.GOAP
             _decisionInterval = Mathf.Max(0.05f, decisionInterval);
             _plannerSettings = GoapPlannerSettings.Default;
             _logDecisions = logDecisions;
+        }
+
+        public bool SetInitialFact(GoapFactValueReference value)
+        {
+            if (!value.IsValid || _domain == null || !_domain.Facts.Contains(value.Fact))
+            {
+                return false;
+            }
+
+            var index = _initialFacts.FindIndex(item => item.Fact == value.Fact);
+            if (index >= 0)
+            {
+                _initialFacts[index] = value;
+            }
+            else
+            {
+                _initialFacts.Add(value);
+            }
+
+            return true;
+        }
+
+        public bool RemoveInitialFact(GoapFact fact)
+        {
+            return fact != null && _initialFacts.RemoveAll(item => item.Fact == fact) > 0;
+        }
+
+        public bool SetSensor(GoapProfileSensorDefinition sensor)
+        {
+            if (sensor?.Fact == null || _domain == null || !_domain.Facts.Contains(sensor.Fact))
+            {
+                return false;
+            }
+
+            var index = _sensors.FindIndex(item => item != null && item.Fact == sensor.Fact);
+            if (index >= 0)
+            {
+                _sensors[index] = sensor;
+            }
+            else
+            {
+                _sensors.Add(sensor);
+            }
+
+            return true;
+        }
+
+        public bool RemoveSensor(GoapFact fact)
+        {
+            return fact != null && _sensors.RemoveAll(item => item != null && item.Fact == fact) > 0;
         }
     }
 }

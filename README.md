@@ -121,7 +121,7 @@ World State внутри runtime компилируется в индексы, B
 
 ## Быстрое создание контента
 
-Откройте `Tools > GOAP > Content Wizard` (`Ctrl+Shift+N`). В мастере пять вкладок.
+Откройте `Tools > GOAP > Content Wizard` (`Ctrl+Shift+N`). В мастере семь вкладок.
 
 ### Agent
 
@@ -131,6 +131,37 @@ World State внутри runtime компилируется в индексы, B
 4. Нажмите `Setup Selected Object` или `Create Agent`.
 
 Мастер сам добавляет `GoapAgentAuthoring`, `GoapAgent`, универсальный исполнитель и профильный сенсор. У нового агента можно включить `Visible Placeholder`, чтобы сразу получить видимую Capsule в сцене.
+
+### Profile
+
+`Profile Composer` собирает компактный профиль под выбранные цели, поэтому не нужно вручную переносить в него все Actions, Sensors и начальные Facts из Domain.
+
+1. Откройте вкладку `Profile` или нажмите `Compose Profile` в окне графа.
+2. Назначьте `Domain` и введите имя нового профиля.
+3. Отметьте Goals, которыми должен обладать NPC. Кнопки `Select All` и `Clear` управляют всем списком.
+4. Проверьте блок `Generated Profile`: мастер идёт от Desired State назад, выбирает производящие Actions и добавляет их Preconditions.
+5. При необходимости включите `Include Alternatives`, чтобы взять все подходящие Actions, а не только действие с наименьшей стоимостью.
+6. Включите `Scene Agent`, если вместе с Profile нужно сразу создать NPC, затем нажмите `Create Composed Profile`.
+
+Activation Conditions выбранных Goals становятся начальными Facts. Для внешних условий доступности мастер предлагает Smart Object Sensors, а для числового эффекта вместе с шагом Inventory Add/Remove предлагает Inventory Sensor и компонент `GoapInventory`.
+
+Красная ошибка `No grounded Action chain can achieve` означает, что требуемое состояние нельзя получить от текущих начальных Facts и внешних условий. Причиной может быть отсутствующий Action или замкнутый цикл зависимостей: создание блокируется. Предупреждение об unresolved Fact означает, что значение должно приходить из пользовательского Sensor или задаваться как Initial Fact; продолжить можно только после явного включения `Allow Unresolved Facts`.
+
+### Sensors
+
+Вкладка `Sensors` настраивает входные данные существующего Agent Profile без ручного редактирования массивов в Inspector.
+
+1. Выберите `Agent Profile`.
+2. В `Input Coverage` проверьте каждое предусловие Action и условие активации Goal.
+3. Для строки `Missing` нажмите `Configure`: нужный Fact и подходящий тип источника подставятся автоматически.
+4. Выберите `Sensor`, если значение должно обновляться из мира, или `Initial Fact`, если это стартовое состояние агента.
+5. Заполните параметры источника и нажмите `Add` либо `Replace`.
+
+Coverage различает источники `Action`, `Sensor`, `InitialFact`, `DefaultValue` и `Missing`. Переключатель `Show covered inputs` показывает полную таблицу. Текущие Sensors и Initial Facts можно загрузить через `Edit` или удалить через `Remove`.
+
+Доступны Smart Object, Inventory, Distance, Proximity, Stat, Time, Component Property и Constant. Для режимов обновления `Manual` и `Event` вызывайте `RequestSensor` или `RequestAllSensors` у `GoapProfileSensorBehaviour`. Кнопка `Apply Required Components to Scene Agents` добавляет `GoapInventory` и `GoapStatSource` всем загруженным NPC с выбранным профилем. Named Target задаётся отдельно на каждом `GoapAgentAuthoring`.
+
+Sensor Builder также открывается кнопкой в Inspector профиля и кнопкой исправления `Open Sensor` в валидации графа. Если Profile Composer создаёт профиль с разрешённым unresolved Fact, мастер автоматически переводит пользователя на эту вкладку.
 
 ### Action
 

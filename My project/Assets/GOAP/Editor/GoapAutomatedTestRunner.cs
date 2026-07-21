@@ -25,18 +25,19 @@ namespace Practice.GOAP.Editor
         [InitializeOnLoadMethod]
         private static void Initialize()
         {
+            if (File.Exists(MarkerPath))
+            {
+                SessionState.SetBool(ActiveSessionKey, false);
+                SessionState.EraseString(PhaseSessionKey);
+                File.Delete(MarkerPath);
+                EditorApplication.delayCall += RunAllTests;
+                return;
+            }
+
             if (SessionState.GetBool(ActiveSessionKey, false))
             {
                 TestRunnerApi.RegisterTestCallback(new ResultCallbacks());
             }
-
-            if (!File.Exists(MarkerPath))
-            {
-                return;
-            }
-
-            File.Delete(MarkerPath);
-            EditorApplication.delayCall += RunAllTests;
         }
 
         [MenuItem(RunTestsMenuPath)]

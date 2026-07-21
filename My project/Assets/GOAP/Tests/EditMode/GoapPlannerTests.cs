@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Practice.GOAP.Editor;
 using UnityEditor;
 using UnityEngine;
 using System.Threading;
@@ -36,7 +37,9 @@ namespace Practice.GOAP.Tests
             var goal = Goal("Be Fed", 10, Conditions((hungry, true)), Conditions((hungry, false)));
             var state = new GoapWorldState();
 
-            var result = new GoapPlanner().Plan(state, new[] { eat, getFood }, goal);
+            var settings = GoapPlannerSettings.Default;
+            settings.MaxPlanningMilliseconds = 100f;
+            var result = new GoapPlanner().Plan(state, new[] { eat, getFood }, goal, settings);
 
             Assert.That(result.Success, Is.True, result.Message);
             Assert.That(result.Plan.Actions, Is.EqualTo(new[] { getFood, eat }));
@@ -255,6 +258,12 @@ namespace Practice.GOAP.Tests
                 .Select(issue => issue.Message)
                 .ToArray();
             Assert.That(errors, Is.Empty, string.Join("\n", errors));
+
+            var editorWarnings = GoapEditorDomainValidator.Validate(domain)
+                .Where(issue => issue.Severity == GoapValidationSeverity.Warning)
+                .Select(issue => issue.Message)
+                .ToArray();
+            Assert.That(editorWarnings, Is.Empty, string.Join("\n", editorWarnings));
         }
 
         private GoapFact Fact(string name, bool defaultValue)
