@@ -65,11 +65,60 @@ namespace Practice.GOAP.Editor
             toolbar.Add(new ToolbarButton(CreateDomain) { text = "New Domain" });
             toolbar.Add(new ToolbarButton(Save) { text = "Save" });
             toolbar.Add(new ToolbarButton(ValidateDomain) { text = "Validate" });
-            toolbar.Add(new ToolbarButton(() => _graphView.FrameEverything()) { text = "Frame All" });
-            toolbar.Add(new ToolbarButton(() => _graphView.AutoLayoutSelection()) { text = "Auto Layout" });
             toolbar.Add(new ToolbarButton(GoapRuntimeDebuggerWindow.Open) { text = "Debugger" });
             toolbar.Add(new ToolbarButton(GoapDemoProjectBuilder.BuildOrRefreshDemo) { text = "Build Demo" });
             rootVisualElement.Add(toolbar);
+
+            var graphToolbar = new Toolbar();
+            graphToolbar.Add(new ToolbarButton(() => _graphView.SortGraph())
+            {
+                text = "Sort Graph",
+                tooltip = "Arrange the full graph by causal flow and reduce edge crossings."
+            });
+            var focusToggle = new ToolbarToggle
+            {
+                text = "Focus",
+                tooltip = "Dim unrelated nodes and connections when a node is selected."
+            };
+            focusToggle.SetValueWithoutNotify(true);
+            focusToggle.RegisterValueChangedCallback(evt => _graphView?.SetFocusMode(evt.newValue));
+            graphToolbar.Add(focusToggle);
+
+            var detailsToggle = new ToolbarToggle
+            {
+                text = "Details",
+                tooltip = "Show conditions and effects inside graph nodes."
+            };
+            detailsToggle.SetValueWithoutNotify(false);
+            detailsToggle.RegisterValueChangedCallback(evt => _graphView?.SetDetailsVisible(evt.newValue));
+            graphToolbar.Add(detailsToggle);
+
+            var connectionsMenu = new ToolbarMenu
+            {
+                text = "Connections",
+                tooltip = "Choose which connection types are visible."
+            };
+            connectionsMenu.menu.AppendAction(
+                "Preconditions",
+                _ => _graphView?.SetPreconditionsVisible(!_graphView.PreconditionsVisible),
+                _ => _graphView != null && _graphView.PreconditionsVisible
+                    ? DropdownMenuAction.Status.Checked
+                    : DropdownMenuAction.Status.Normal);
+            connectionsMenu.menu.AppendAction(
+                "Effects",
+                _ => _graphView?.SetEffectsVisible(!_graphView.EffectsVisible),
+                _ => _graphView != null && _graphView.EffectsVisible
+                    ? DropdownMenuAction.Status.Checked
+                    : DropdownMenuAction.Status.Normal);
+            connectionsMenu.menu.AppendAction(
+                "Goal Links",
+                _ => _graphView?.SetGoalLinksVisible(!_graphView.GoalLinksVisible),
+                _ => _graphView != null && _graphView.GoalLinksVisible
+                    ? DropdownMenuAction.Status.Checked
+                    : DropdownMenuAction.Status.Normal);
+            graphToolbar.Add(connectionsMenu);
+            graphToolbar.Add(new ToolbarButton(() => _graphView.FrameEverything()) { text = "Frame All" });
+            rootVisualElement.Add(graphToolbar);
             _tabsToolbar = new Toolbar();
             rootVisualElement.Add(_tabsToolbar);
         }

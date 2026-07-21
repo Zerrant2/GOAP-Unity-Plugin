@@ -20,8 +20,15 @@ namespace Practice.GOAP.Editor
     {
         private readonly Dictionary<GoapDefinition, Node> _nodes = new();
         private readonly Dictionary<GoapDefinition, GoapValidationSeverity> _validation = new();
+        private bool _focusMode = true;
+        private bool _showDetails;
+        private bool _showPreconditions = true;
+        private bool _showEffects = true;
+        private bool _showGoalLinks = true;
         private GoapDomain _domain;
         private Action<GoapDefinition> _selectionChanged;
+        private GoapDefinition _focusedDefinition;
+        private string _searchQuery;
         private bool _rebuilding;
         private Port _dragSourcePort;
         private Vector2 _lastPointerPosition;
@@ -29,6 +36,12 @@ namespace Practice.GOAP.Editor
         public event Action<GoapNodeKind, Vector2> CreateRequested;
         public event Action<IReadOnlyList<GoapDefinition>> DuplicateRequested;
         public event Action<GoapDefinition, GoapGraphConnectionRole, Vector2> ConnectedFactRequested;
+
+        public bool FocusMode => _focusMode;
+        public bool DetailsVisible => _showDetails;
+        public bool PreconditionsVisible => _showPreconditions;
+        public bool EffectsVisible => _showEffects;
+        public bool GoalLinksVisible => _showGoalLinks;
 
         public GoapGraphView()
         {
@@ -49,6 +62,16 @@ namespace Practice.GOAP.Editor
             RegisterCallback<PointerMoveEvent>(evt =>
             {
                 _lastPointerPosition = this.ChangeCoordinatesTo(contentViewContainer, evt.localPosition);
+            });
+            RegisterCallback<MouseDownEvent>(evt =>
+            {
+                var target = evt.target as VisualElement;
+                var graphElement = target as GraphElement ?? target?.GetFirstAncestorOfType<GraphElement>();
+                if (evt.button == 0 && graphElement == null)
+                {
+                    _focusedDefinition = null;
+                    RefreshGraphVisuals();
+                }
             });
             nodeCreationRequest = _ => RequestConnectedFact();
             serializeGraphElements = elements => string.Join(",", elements
@@ -107,8 +130,15 @@ namespace Practice.GOAP.Editor
             }
 
             AddFactEdges();
+            ApplyDetailsState();
             AddAnnotations();
+            if (_focusedDefinition != null && !_nodes.ContainsKey(_focusedDefinition))
+            {
+                _focusedDefinition = null;
+            }
+
             _rebuilding = false;
+            RefreshGraphVisuals();
         }
 
         public void FrameEverything()
@@ -125,59 +155,120 @@ namespace Practice.GOAP.Editor
 
             ClearSelection();
             AddToSelection(node);
+            _focusedDefinition = definition;
+            RefreshGraphVisuals();
             FrameSelection();
         }
 
-        public void AutoLayout()
+        public void SortGraph()
         {
             if (_domain == null)
             {
                 return;
             }
 
-            Undo.RecordObject(_domain, "Auto Layout GOAP Graph");
-            LayoutDefinitions(_domain.Facts.Where(item => item != null), GoapNodeKind.Fact, 60f, 80f, 0, 135f);
-            LayoutDefinitions(_domain.Actions.Where(item => item != null), GoapNodeKind.Action, 400f, 80f, 2, 230f);
-            LayoutDefinitions(_domain.Goals.Where(item => item != null), GoapNodeKind.Goal, 1080f, 100f, 0, 240f);
+            var nodeRects = _nodes.ToDictionary(pair => pair.Key, pair => pair.Value.GetPosition());
+            var positions = GoapGraphLayoutEngine.Calculate(_domain, nodeRects);
+            Undo.RecordObject(_domain, "Sort GOAP Graph");
+            foreach (var pair in positions)
+            {
+                StoreDefinitionPosition(pair.Key, pair.Value);
+            }
+
             EditorUtility.SetDirty(_domain);
             Rebuild(_domain, _selectionChanged);
-            FrameAll();
+            schedule.Execute(() => FrameAll());
         }
 
-        public void AutoLayoutSelection()
+        public void SortSelection()
         {
             var selectedNodes = selection.OfType<Node>().ToArray();
             if (selectedNodes.Length == 0)
             {
-                AutoLayout();
+                SortGraph();
                 return;
             }
 
-            Undo.RecordObject(_domain, "Auto Layout GOAP Selection");
-            var origin = selectedNodes.Select(node => node.GetPosition().position).Aggregate(Vector2.zero, (sum, value) => sum + value) /
-                         selectedNodes.Length;
-            for (var index = 0; index < selectedNodes.Length; index++)
+            if (_domain == null)
             {
-                var node = selectedNodes[index];
-                var position = origin + new Vector2((index % 3) * 320f, (index / 3) * 220f);
-                node.SetPosition(new Rect(position, node.GetPosition().size));
-                StoreNodePosition(node);
+                return;
+            }
+
+            var definitions = selectedNodes
+                .Select(node => node.userData as GoapDefinition)
+                .Where(definition => definition != null)
+                .ToArray();
+            var nodeRects = _nodes.ToDictionary(pair => pair.Key, pair => pair.Value.GetPosition());
+            var positions = GoapGraphLayoutEngine.Calculate(
+                _domain,
+                nodeRects,
+                definitions,
+                GetBounds(selectedNodes).position);
+            Undo.RecordObject(_domain, "Sort GOAP Selection");
+            foreach (var pair in positions)
+            {
+                if (!_nodes.TryGetValue(pair.Key, out var node))
+                {
+                    continue;
+                }
+
+                node.SetPosition(new Rect(pair.Value, node.GetPosition().size));
+                StoreDefinitionPosition(pair.Key, pair.Value);
             }
 
             EditorUtility.SetDirty(_domain);
+            schedule.Execute(() => FrameSelection());
+        }
+
+        public void AutoLayout()
+        {
+            SortGraph();
+        }
+
+        public void AutoLayoutSelection()
+        {
+            SortSelection();
+        }
+
+        public void SetFocusMode(bool enabled)
+        {
+            _focusMode = enabled;
+            RefreshGraphVisuals();
+        }
+
+        public void SetDetailsVisible(bool visible)
+        {
+            if (_showDetails == visible)
+            {
+                return;
+            }
+
+            _showDetails = visible;
+            Rebuild(_domain, _selectionChanged);
+        }
+
+        public void SetPreconditionsVisible(bool visible)
+        {
+            _showPreconditions = visible;
+            RefreshGraphVisuals();
+        }
+
+        public void SetEffectsVisible(bool visible)
+        {
+            _showEffects = visible;
+            RefreshGraphVisuals();
+        }
+
+        public void SetGoalLinksVisible(bool visible)
+        {
+            _showGoalLinks = visible;
+            RefreshGraphVisuals();
         }
 
         public void ApplySearch(string query)
         {
-            query = query?.Trim();
-            foreach (var pair in _nodes)
-            {
-                var matches = string.IsNullOrWhiteSpace(query) ||
-                              pair.Key.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                              (!string.IsNullOrWhiteSpace(pair.Key.Description) &&
-                               pair.Key.Description.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
-                pair.Value.style.opacity = matches ? 1f : 0.18f;
-            }
+            _searchQuery = query?.Trim();
+            RefreshGraphVisuals();
         }
 
         public void SetValidationIssues(IReadOnlyList<GoapValidationIssue> issues)
@@ -301,8 +392,8 @@ namespace Practice.GOAP.Editor
             evt.menu.AppendAction("Create/Fact", _ => CreateRequested?.Invoke(GoapNodeKind.Fact, position));
             evt.menu.AppendAction("Create/Action", _ => CreateRequested?.Invoke(GoapNodeKind.Action, position));
             evt.menu.AppendAction("Create/Goal", _ => CreateRequested?.Invoke(GoapNodeKind.Goal, position));
-            evt.menu.AppendAction("Layout/Auto Layout", _ => AutoLayout());
-            evt.menu.AppendAction("Layout/Selected", _ => AutoLayoutSelection());
+            evt.menu.AppendAction("Layout/Sort Graph", _ => SortGraph());
+            evt.menu.AppendAction("Layout/Sort Selection", _ => SortSelection());
             evt.menu.AppendAction("Layout/Align Left", _ => AlignSelection(true));
             evt.menu.AppendAction("Layout/Align Top", _ => AlignSelection(false));
             evt.menu.AppendAction("Layout/Distribute Horizontally", _ => DistributeSelection(true));
@@ -413,13 +504,15 @@ namespace Practice.GOAP.Editor
 
         private Node CreateNode(GoapDefinition definition, Vector2 position, Vector2 size, Color color)
         {
+            var resolvedSize = _showDetails ? size : GetCompactNodeSize(definition, size.x);
             var node = new Node
             {
                 title = definition.DisplayName,
                 userData = definition,
-                tooltip = definition.Description
+                tooltip = definition.Description,
+                expanded = true
             };
-            node.SetPosition(new Rect(position, size));
+            node.SetPosition(new Rect(position, resolvedSize));
             SetNodeAccent(node, definition.HasCustomNodeColor ? definition.NodeColor : color);
             if (definition.Icon != null)
             {
@@ -434,6 +527,8 @@ namespace Practice.GOAP.Editor
             {
                 if (evt.button == 0)
                 {
+                    _focusedDefinition = definition;
+                    RefreshGraphVisuals();
                     _selectionChanged?.Invoke(definition);
                 }
             });
@@ -520,26 +615,8 @@ namespace Practice.GOAP.Editor
 
             var edge = output.ConnectTo(input);
             edge.userData = binding;
+            ApplyEdgeStyle(edge, binding, false);
             AddElement(edge);
-        }
-
-        private void LayoutDefinitions<T>(
-            IEnumerable<T> definitions,
-            GoapNodeKind kind,
-            float startX,
-            float startY,
-            int columns,
-            float verticalSpacing) where T : GoapDefinition
-        {
-            var index = 0;
-            foreach (var definition in definitions)
-            {
-                var column = columns <= 0 ? 0 : index % columns;
-                var row = columns <= 0 ? index : index / columns;
-                var position = new Vector2(startX + column * 320f, startY + row * verticalSpacing);
-                _domain.SetNodePosition(definition.Id, kind, position);
-                index++;
-            }
         }
 
         private Vector2 GetPosition(GoapDefinition definition, GoapNodeKind kind, Vector2 fallback)
@@ -966,16 +1043,24 @@ namespace Practice.GOAP.Editor
 
         private void StoreNodePosition(Node element)
         {
-            switch (element.userData)
+            if (element.userData is GoapDefinition definition)
+            {
+                StoreDefinitionPosition(definition, element.GetPosition().position);
+            }
+        }
+
+        private void StoreDefinitionPosition(GoapDefinition definition, Vector2 position)
+        {
+            switch (definition)
             {
                 case GoapActionDefinition action:
-                    _domain.SetNodePosition(action.Id, GoapNodeKind.Action, element.GetPosition().position);
+                    _domain.SetNodePosition(action.Id, GoapNodeKind.Action, position);
                     break;
                 case GoapGoalDefinition goal:
-                    _domain.SetNodePosition(goal.Id, GoapNodeKind.Goal, element.GetPosition().position);
+                    _domain.SetNodePosition(goal.Id, GoapNodeKind.Goal, position);
                     break;
                 case GoapFact fact:
-                    _domain.SetNodePosition(fact.Id, GoapNodeKind.Fact, element.GetPosition().position);
+                    _domain.SetNodePosition(fact.Id, GoapNodeKind.Fact, position);
                     break;
             }
         }
@@ -1073,6 +1158,197 @@ namespace Practice.GOAP.Editor
             node.style.borderRightWidth = 2f;
             node.style.borderBottomWidth = 2f;
             node.style.borderLeftWidth = 2f;
+        }
+
+        private void ApplyDetailsState()
+        {
+            foreach (var node in _nodes.Values)
+            {
+                node.expanded = _showDetails;
+                node.RefreshExpandedState();
+            }
+        }
+
+        private void RefreshGraphVisuals()
+        {
+            if (_rebuilding)
+            {
+                return;
+            }
+
+            var focusSet = _focusMode && _focusedDefinition != null
+                ? BuildFocusSet(_focusedDefinition)
+                : null;
+            foreach (var pair in _nodes)
+            {
+                var matchesSearch = MatchesSearch(pair.Key);
+                var matchesFocus = focusSet == null || focusSet.Contains(pair.Key);
+                pair.Value.style.opacity = !matchesSearch ? 0.08f : matchesFocus ? 1f : 0.12f;
+            }
+
+            foreach (var edge in edges)
+            {
+                if (edge.userData is not GoapGraphEdgeBinding binding)
+                {
+                    continue;
+                }
+
+                var visible = IsConnectionVisible(binding.Kind);
+                edge.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!visible)
+                {
+                    continue;
+                }
+
+                var matchesFocus = focusSet == null ||
+                                   focusSet.Contains(binding.Fact) && focusSet.Contains(binding.Owner);
+                var matchesSearch = string.IsNullOrWhiteSpace(_searchQuery) ||
+                                    MatchesSearch(binding.Fact) || MatchesSearch(binding.Owner);
+                var emphasized = matchesFocus && matchesSearch && focusSet != null;
+                edge.style.opacity = !matchesSearch ? 0.03f : matchesFocus ? focusSet == null ? 0.46f : 0.96f : 0.035f;
+                ApplyEdgeStyle(edge, binding, emphasized);
+            }
+        }
+
+        private HashSet<GoapDefinition> BuildFocusSet(GoapDefinition definition)
+        {
+            var result = new HashSet<GoapDefinition> { definition };
+            switch (definition)
+            {
+                case GoapGoalDefinition goal:
+                    var visitedFacts = new HashSet<GoapFact>();
+                    foreach (var fact in goal.ActivationConditions.Concat(goal.DesiredState)
+                                 .Select(condition => condition.Fact)
+                                 .Where(fact => fact != null))
+                    {
+                        result.Add(fact);
+                        AddFactProducers(fact, result, visitedFacts, 8);
+                    }
+                    break;
+
+                case GoapActionDefinition action:
+                    var relatedFacts = action.Preconditions.Concat(action.Effects)
+                        .Select(condition => condition.Fact)
+                        .Where(fact => fact != null)
+                        .Distinct()
+                        .ToArray();
+                    foreach (var fact in relatedFacts)
+                    {
+                        result.Add(fact);
+                    }
+
+                    foreach (var relatedGoal in _domain.Goals.Where(goal => goal != null &&
+                                 goal.ActivationConditions.Concat(goal.DesiredState)
+                                     .Any(condition => condition.Fact != null && relatedFacts.Contains(condition.Fact))))
+                    {
+                        result.Add(relatedGoal);
+                    }
+                    break;
+
+                case GoapFact fact:
+                    foreach (var relatedAction in _domain.Actions.Where(action => action != null &&
+                                 action.Preconditions.Concat(action.Effects)
+                                     .Any(condition => condition.Fact == fact)))
+                    {
+                        result.Add(relatedAction);
+                    }
+
+                    foreach (var relatedGoal in _domain.Goals.Where(goal => goal != null &&
+                                 goal.ActivationConditions.Concat(goal.DesiredState)
+                                     .Any(condition => condition.Fact == fact)))
+                    {
+                        result.Add(relatedGoal);
+                    }
+                    break;
+            }
+
+            return result;
+        }
+
+        private void AddFactProducers(
+            GoapFact fact,
+            ISet<GoapDefinition> result,
+            ISet<GoapFact> visitedFacts,
+            int remainingDepth)
+        {
+            if (fact == null || remainingDepth <= 0 || !visitedFacts.Add(fact))
+            {
+                return;
+            }
+
+            foreach (var action in _domain.Actions.Where(action => action != null &&
+                         action.Effects.Any(effect => effect.Fact == fact)))
+            {
+                result.Add(action);
+                foreach (var effectFact in action.Effects.Select(effect => effect.Fact).Where(item => item != null))
+                {
+                    result.Add(effectFact);
+                }
+
+                foreach (var preconditionFact in action.Preconditions
+                             .Select(condition => condition.Fact)
+                             .Where(item => item != null))
+                {
+                    result.Add(preconditionFact);
+                    AddFactProducers(preconditionFact, result, visitedFacts, remainingDepth - 1);
+                }
+            }
+        }
+
+        private bool MatchesSearch(GoapDefinition definition)
+        {
+            return definition != null &&
+                   (string.IsNullOrWhiteSpace(_searchQuery) ||
+                    definition.DisplayName.IndexOf(_searchQuery, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    (!string.IsNullOrWhiteSpace(definition.Description) &&
+                     definition.Description.IndexOf(_searchQuery, StringComparison.OrdinalIgnoreCase) >= 0));
+        }
+
+        private bool IsConnectionVisible(GoapGraphBindingKind kind)
+        {
+            return kind switch
+            {
+                GoapGraphBindingKind.ActionPrecondition => _showPreconditions,
+                GoapGraphBindingKind.ActionEffect => _showEffects,
+                GoapGraphBindingKind.GoalActivation => _showGoalLinks,
+                GoapGraphBindingKind.GoalDesired => _showGoalLinks,
+                _ => true
+            };
+        }
+
+        private static void ApplyEdgeStyle(Edge edge, GoapGraphEdgeBinding binding, bool emphasized)
+        {
+            if (edge?.edgeControl == null || binding == null)
+            {
+                return;
+            }
+
+            var color = binding.Kind switch
+            {
+                GoapGraphBindingKind.ActionPrecondition => new Color(0.95f, 0.67f, 0.2f),
+                GoapGraphBindingKind.ActionEffect => new Color(0.3f, 0.82f, 0.5f),
+                GoapGraphBindingKind.GoalActivation => new Color(0.76f, 0.48f, 0.9f),
+                GoapGraphBindingKind.GoalDesired => new Color(0.3f, 0.68f, 1f),
+                _ => new Color(0.72f, 0.75f, 0.78f)
+            };
+            edge.edgeControl.inputColor = color;
+            edge.edgeControl.outputColor = color;
+            edge.edgeControl.edgeWidth = emphasized ? 3 : 2;
+            edge.edgeControl.drawToCap = true;
+            edge.edgeControl.toCapColor = color;
+            edge.edgeControl.capRadius = emphasized ? 4f : 3f;
+            edge.edgeControl.MarkDirtyRepaint();
+        }
+
+        private static Vector2 GetCompactNodeSize(GoapDefinition definition, float width)
+        {
+            var height = definition switch
+            {
+                GoapFact _ => 76f,
+                GoapGoalDefinition _ => 104f,
+                _ => 86f
+            };
+            return new Vector2(width, height);
         }
 
         private enum GoapGraphBindingKind
