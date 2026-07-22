@@ -29,8 +29,8 @@ namespace Practice.GOAP.Editor
             {
                 SessionState.SetBool(ActiveSessionKey, false);
                 SessionState.EraseString(PhaseSessionKey);
-                File.Delete(MarkerPath);
-                EditorApplication.delayCall += RunAllTests;
+                EditorApplication.update -= RunWhenEditorReady;
+                EditorApplication.update += RunWhenEditorReady;
                 return;
             }
 
@@ -38,6 +38,22 @@ namespace Practice.GOAP.Editor
             {
                 TestRunnerApi.RegisterTestCallback(new ResultCallbacks());
             }
+        }
+
+        private static void RunWhenEditorReady()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                return;
+            }
+
+            EditorApplication.update -= RunWhenEditorReady;
+            if (File.Exists(MarkerPath))
+            {
+                File.Delete(MarkerPath);
+            }
+
+            RunAllTests();
         }
 
         [MenuItem(RunTestsMenuPath)]

@@ -11,6 +11,8 @@ namespace Practice.GOAP
     {
         private const float CostEpsilon = 0.0001f;
         private static readonly ProfilerMarker PlanMarker = new("GOAP.Plan");
+        private static readonly ProfilerMarker CompileMarker = new("GOAP.Plan.CompileState");
+        private static readonly ProfilerMarker SearchMarker = new("GOAP.Plan.Search");
 
         public GoapPlanResult Plan(
             GoapWorldState initialState,
@@ -18,6 +20,40 @@ namespace Practice.GOAP
             GoapGoalDefinition goal,
             GoapPlannerSettings? settings = null,
             CancellationToken cancellationToken = default)
+        {
+            return PlanInternal(
+                initialState,
+                availableActions,
+                goal,
+                null,
+                settings,
+                cancellationToken);
+        }
+
+        public GoapPlanResult PlanCompiled(
+            GoapWorldState initialState,
+            IEnumerable<GoapActionDefinition> availableActions,
+            GoapGoalDefinition goal,
+            GoapCompiledDomain compiledDomain,
+            GoapPlannerSettings? settings = null,
+            CancellationToken cancellationToken = default)
+        {
+            return PlanInternal(
+                initialState,
+                availableActions,
+                goal,
+                compiledDomain,
+                settings,
+                cancellationToken);
+        }
+
+        private GoapPlanResult PlanInternal(
+            GoapWorldState initialState,
+            IEnumerable<GoapActionDefinition> availableActions,
+            GoapGoalDefinition goal,
+            GoapCompiledDomain compiledDomain,
+            GoapPlannerSettings? settings,
+            CancellationToken cancellationToken)
         {
             using var marker = PlanMarker.Auto();
             var stopwatch = Stopwatch.StartNew();
@@ -33,14 +69,39 @@ namespace Practice.GOAP
                 .ThenBy(action => action.Id, StringComparer.Ordinal)
                 .ToArray();
 
-            var relevantFacts = CollectRelevantFacts(actions, goal);
-            if (initialState.Satisfies(goal.DesiredState))
+            GoapPlannerState initialPlannerState;
+            GoapCompiledAction[] compiledActions;
+            GoapCompiledCondition[] compiledGoal;
+            float[] cheapestProducerCosts;
+            using (CompileMarker.Auto())
+            {
+                if (compiledDomain != null)
+                {
+                    initialPlannerState = compiledDomain.CapturePlannerState(initialState);
+                    compiledActions = actions.Select(compiledDomain.GetCompiledAction).ToArray();
+                    compiledGoal = compiledDomain.GetCompiledGoal(goal);
+                }
+                else
+                {
+                    var relevantFacts = CollectRelevantFacts(actions, goal);
+                    var layout = new GoapPlannerStateLayout(relevantFacts);
+                    initialPlannerState = layout.Capture(initialState);
+                    compiledActions = actions
+                        .Select(action => new GoapCompiledAction(action, layout))
+                        .ToArray();
+                    compiledGoal = layout.Compile(goal.DesiredState);
+                }
+
+                cheapestProducerCosts = CollectCheapestProducerCosts(actions, goal);
+            }
+
+            if (initialPlannerState.Satisfies(compiledGoal))
             {
                 return GoapPlanResult.Succeeded(new GoapPlan(
                     new List<GoapActionDefinition>(), 0f, 0, stopwatch.Elapsed.TotalMilliseconds));
             }
 
-            if (!EveryGoalFactHasProducer(initialState, actions, goal))
+            if (!EveryGoalFactHasProducer(initialPlannerState, compiledGoal, cheapestProducerCosts))
             {
                 return GoapPlanResult.Failed(
                     GoapPlanFailure.GoalHasNoProducer,
@@ -49,23 +110,24 @@ namespace Practice.GOAP
 
             var sequence = 0L;
             var initialNode = new SearchNode(
-                initialState.Clone(),
+                initialPlannerState,
                 null,
                 null,
                 0f,
-                EstimateRemainingCost(initialState, actions, goal),
+                EstimateRemainingCost(initialPlannerState, compiledGoal, cheapestProducerCosts),
                 0,
                 sequence++);
 
             var open = new MinHeap<SearchNode>();
             open.Push(initialNode);
 
-            var bestKnownCost = new Dictionary<GoapStateKey, float>
+            var bestKnownCost = new Dictionary<GoapPlannerState, float>
             {
-                [initialState.BuildKey(relevantFacts)] = 0f
+                [initialPlannerState] = 0f
             };
 
             var expandedStates = 0;
+            using var searchMarker = SearchMarker.Auto();
             while (open.Count > 0)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -83,13 +145,13 @@ namespace Practice.GOAP
                 }
 
                 var current = open.Pop();
-                var currentKey = current.State.BuildKey(relevantFacts);
-                if (bestKnownCost.TryGetValue(currentKey, out var knownCost) && current.Cost > knownCost + CostEpsilon)
+                if (bestKnownCost.TryGetValue(current.State, out var knownCost) &&
+                    current.Cost > knownCost + CostEpsilon)
                 {
                     continue;
                 }
 
-                if (current.State.Satisfies(goal.DesiredState))
+                if (current.State.Satisfies(compiledGoal))
                 {
                     return GoapPlanResult.Succeeded(BuildPlan(
                         current, expandedStates, stopwatch.Elapsed.TotalMilliseconds));
@@ -108,7 +170,7 @@ namespace Practice.GOAP
                     continue;
                 }
 
-                foreach (var action in actions)
+                foreach (var action in compiledActions)
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -122,26 +184,26 @@ namespace Practice.GOAP
                         continue;
                     }
 
-                    var nextState = current.State.Clone();
-                    if (!nextState.Apply(action.Effects))
+                    var nextState = current.State.Apply(action.Effects);
+                    if (nextState == null)
                     {
                         continue;
                     }
 
-                    var nextCost = current.Cost + action.Cost;
-                    var nextKey = nextState.BuildKey(relevantFacts);
-                    if (bestKnownCost.TryGetValue(nextKey, out var bestCost) && bestCost <= nextCost + CostEpsilon)
+                    var nextCost = current.Cost + action.Definition.Cost;
+                    if (bestKnownCost.TryGetValue(nextState, out var bestCost) &&
+                        bestCost <= nextCost + CostEpsilon)
                     {
                         continue;
                     }
 
-                    bestKnownCost[nextKey] = nextCost;
+                    bestKnownCost[nextState] = nextCost;
                     open.Push(new SearchNode(
                         nextState,
                         current,
-                        action,
+                        action.Definition,
                         nextCost,
-                        EstimateRemainingCost(nextState, actions, goal),
+                        EstimateRemainingCost(nextState, compiledGoal, cheapestProducerCosts),
                         current.Depth + 1,
                         sequence++));
                 }
@@ -188,25 +250,51 @@ namespace Practice.GOAP
             }
         }
 
-        private static bool EveryGoalFactHasProducer(
-            GoapWorldState state,
+        private static float[] CollectCheapestProducerCosts(
             IReadOnlyList<GoapActionDefinition> actions,
             GoapGoalDefinition goal)
         {
-            foreach (var desired in goal.DesiredState)
+            var costs = new float[goal.DesiredState.Count];
+            for (var desiredIndex = 0; desiredIndex < goal.DesiredState.Count; desiredIndex++)
             {
+                var desired = goal.DesiredState[desiredIndex];
+                costs[desiredIndex] = float.PositiveInfinity;
+                if (!desired.IsValid)
+                {
+                    continue;
+                }
+
+                foreach (var action in actions)
+                {
+                    if (action.Effects.Any(effect => effect.CanEstablish(desired)))
+                    {
+                        costs[desiredIndex] = Math.Min(costs[desiredIndex], action.Cost);
+                    }
+                }
+            }
+
+            return costs;
+        }
+
+        private static bool EveryGoalFactHasProducer(
+            GoapPlannerState state,
+            IReadOnlyList<GoapCompiledCondition> desiredState,
+            IReadOnlyList<float> cheapestProducerCosts)
+        {
+            for (var index = 0; index < desiredState.Count; index++)
+            {
+                var desired = desiredState[index];
                 if (!desired.IsValid)
                 {
                     return false;
                 }
 
-                if (desired.Matches(state.GetValue(desired.Fact)))
+                if (state.GetValue(desired.Slot).Matches(desired.Comparison, desired.ExpectedValue))
                 {
                     continue;
                 }
 
-                var found = actions.Any(action => action.Effects.Any(effect => effect.CanEstablish(desired)));
-                if (!found)
+                if (float.IsPositiveInfinity(cheapestProducerCosts[index]))
                 {
                     return false;
                 }
@@ -217,27 +305,22 @@ namespace Practice.GOAP
 
         // The maximum cheapest direct producer is an admissible lower bound: it ignores all prerequisites.
         private static float EstimateRemainingCost(
-            GoapWorldState state,
-            IReadOnlyList<GoapActionDefinition> actions,
-            GoapGoalDefinition goal)
+            GoapPlannerState state,
+            IReadOnlyList<GoapCompiledCondition> desiredState,
+            IReadOnlyList<float> cheapestProducerCosts)
         {
             var estimate = 0f;
-            foreach (var desired in goal.DesiredState)
+            for (var index = 0; index < desiredState.Count; index++)
             {
-                if (!desired.IsValid || desired.Matches(state.GetValue(desired.Fact)))
+                var desired = desiredState[index];
+                if (!desired.IsValid || state.GetValue(desired.Slot).Matches(
+                        desired.Comparison,
+                        desired.ExpectedValue))
                 {
                     continue;
                 }
 
-                var cheapestProducer = float.PositiveInfinity;
-                foreach (var action in actions)
-                {
-                    if (action.Effects.Any(effect => effect.CanEstablish(desired)))
-                    {
-                        cheapestProducer = Math.Min(cheapestProducer, action.Cost);
-                    }
-                }
-
+                var cheapestProducer = cheapestProducerCosts[index];
                 if (!float.IsPositiveInfinity(cheapestProducer))
                 {
                     estimate = Math.Max(estimate, cheapestProducer);
@@ -266,7 +349,7 @@ namespace Practice.GOAP
 
         private sealed class SearchNode : IComparable<SearchNode>
         {
-            public GoapWorldState State { get; }
+            public GoapPlannerState State { get; }
             public SearchNode Parent { get; }
             public GoapActionDefinition Action { get; }
             public float Cost { get; }
@@ -277,7 +360,7 @@ namespace Practice.GOAP
             private float Score => Cost + Heuristic;
 
             public SearchNode(
-                GoapWorldState state,
+                GoapPlannerState state,
                 SearchNode parent,
                 GoapActionDefinition action,
                 float cost,

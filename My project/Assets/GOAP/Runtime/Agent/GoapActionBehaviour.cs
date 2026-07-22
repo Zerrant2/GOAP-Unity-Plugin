@@ -9,6 +9,7 @@ namespace Practice.GOAP
 
         public string ExecutorId => _executorId;
         public GoapActionStatus Status { get; private set; } = GoapActionStatus.Idle;
+        public string LastFailureReason { get; private set; } = string.Empty;
 
         public void SetExecutorId(string executorId)
         {
@@ -22,7 +23,16 @@ namespace Practice.GOAP
 
         public virtual bool CanStart(GoapActionContext context)
         {
-            return isActiveAndEnabled;
+            return EvaluateStart(context).CanStart;
+        }
+
+        public virtual GoapExecutorDiagnostic EvaluateStart(GoapActionContext context)
+        {
+            return isActiveAndEnabled
+                ? GoapExecutorDiagnostic.Ready()
+                : GoapExecutorDiagnostic.Blocked(
+                    GoapExecutorIssueCode.ExecutorDisabled,
+                    $"Executor component '{GetType().Name}' is disabled");
         }
 
         public virtual bool CanContinue(GoapActionContext context)
@@ -32,12 +42,13 @@ namespace Practice.GOAP
 
         public IEnumerator Run(GoapActionContext context)
         {
+            LastFailureReason = string.Empty;
             Status = GoapActionStatus.Running;
             yield return Perform(context);
 
             if (Status == GoapActionStatus.Running)
             {
-                Status = GoapActionStatus.Failed;
+                Fail("Executor finished without reporting success");
             }
         }
 
@@ -49,6 +60,7 @@ namespace Practice.GOAP
             }
 
             Status = GoapActionStatus.Cancelled;
+            LastFailureReason = "Action was cancelled";
             OnCancelled(context);
         }
 
@@ -66,11 +78,14 @@ namespace Practice.GOAP
             }
         }
 
-        protected void Fail()
+        protected void Fail(string reason = null)
         {
             if (Status == GoapActionStatus.Running)
             {
                 Status = GoapActionStatus.Failed;
+                LastFailureReason = string.IsNullOrWhiteSpace(reason)
+                    ? "Executor reported failure"
+                    : reason;
             }
         }
     }

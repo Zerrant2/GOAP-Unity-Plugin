@@ -48,6 +48,32 @@ namespace Practice.GOAP.Demo
             return _targetType == DemoWorldObjectType.None || _target != null;
         }
 
+        public override GoapExecutorDiagnostic EvaluateStart(GoapActionContext context)
+        {
+            var baseDiagnostic = base.EvaluateStart(context);
+            if (!baseDiagnostic.CanStart)
+            {
+                return baseDiagnostic;
+            }
+
+            if (!TryGetComponent<DemoAgentState>(out _))
+            {
+                return GoapExecutorDiagnostic.Blocked(
+                    GoapExecutorIssueCode.RequiredComponentMissing,
+                    "DemoAgentState component is missing");
+            }
+
+            if (_targetType != DemoWorldObjectType.None &&
+                DemoWorldObject.FindClosest(_targetType, transform.position) == null)
+            {
+                return GoapExecutorDiagnostic.Blocked(
+                    GoapExecutorIssueCode.TargetMissing,
+                    $"No available demo target of type '{_targetType}' was found");
+            }
+
+            return GoapExecutorDiagnostic.Ready();
+        }
+
         public override bool CanContinue(GoapActionContext context)
         {
             return base.CanContinue(context) &&
@@ -81,7 +107,7 @@ namespace Practice.GOAP.Demo
 
                 if (_target == null || !_target.Available)
                 {
-                    Fail();
+                    Fail($"Demo target '{_targetType}' became unavailable while moving");
                     yield break;
                 }
             }
@@ -94,7 +120,9 @@ namespace Practice.GOAP.Demo
             var agentState = GetComponent<DemoAgentState>();
             if (agentState == null || !ApplyEffect(agentState))
             {
-                Fail();
+                Fail(agentState == null
+                    ? "DemoAgentState component is missing"
+                    : $"Demo effect '{_effect}' could not be applied");
                 yield break;
             }
 

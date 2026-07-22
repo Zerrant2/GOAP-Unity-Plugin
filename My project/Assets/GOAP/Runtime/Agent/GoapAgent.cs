@@ -48,6 +48,7 @@ namespace Practice.GOAP
         public GoapPlanFailure LastPlanningFailure { get; private set; }
         public string LastPlanningMessage { get; private set; } = string.Empty;
         public string StatusMessage { get; private set; } = "Waiting for domain";
+        public bool PlanningDeferred { get; private set; }
         public bool Paused { get; private set; }
         public IReadOnlyCollection<GoapActionDefinition> PendingActions => _pendingActions;
         public IReadOnlyList<GoapTraceEntry> Trace => _trace;
@@ -77,6 +78,7 @@ namespace Practice.GOAP
 
         private void OnDisable()
         {
+            GoapPlanningScheduler.Cancel(GetInstanceID());
             CancelCurrentAction("Agent disabled");
         }
 
@@ -161,6 +163,12 @@ namespace Practice.GOAP
         public void SetPaused(bool paused)
         {
             Paused = paused;
+            if (paused)
+            {
+                GoapPlanningScheduler.Cancel(GetInstanceID());
+                PlanningDeferred = false;
+            }
+
             StatusMessage = paused ? "Paused by debugger" : "Decision loop resumed";
             if (!paused)
             {
@@ -257,6 +265,7 @@ namespace Practice.GOAP
             GoapPlannerSettings plannerSettings,
             bool logDecisions)
         {
+            GoapPlanningScheduler.Cancel(GetInstanceID());
             CancelCurrentAction("Agent reconfigured");
             _pendingActions.Clear();
             _trace.Clear();
@@ -267,6 +276,7 @@ namespace Practice.GOAP
             LastPlan = null;
             LastPlanningFailure = GoapPlanFailure.None;
             LastPlanningMessage = string.Empty;
+            PlanningDeferred = false;
             _domain = domain;
             _decisionInterval = Mathf.Max(0.05f, decisionInterval);
             _logDecisions = logDecisions;
@@ -389,6 +399,8 @@ namespace Practice.GOAP
 
             if (CurrentGoal == null)
             {
+                GoapPlanningScheduler.Cancel(GetInstanceID());
+                PlanningDeferred = false;
                 StatusMessage = "Idle: every goal is satisfied";
                 LastPlanningFailure = GoapPlanFailure.None;
                 LastPlanningMessage = string.Empty;
@@ -422,13 +434,33 @@ namespace Practice.GOAP
 
         private void BuildPlan()
         {
+            if (!GoapPlanningScheduler.TryAcquire(GetInstanceID()))
+            {
+                _pendingActions.Clear();
+                PlanningDeferred = true;
+                StatusMessage = "Planning queued: frame budget reached";
+                return;
+            }
+
+            PlanningDeferred = false;
             _replanRequested = false;
             _pendingActions.Clear();
 
             var executableActions = GetAvailableActions()
                 .Where(action => action != null && FindBehaviour(action) != null)
                 .ToArray();
-            var result = _planner.Plan(WorldState, executableActions, CurrentGoal, _plannerSettings);
+            var startedAt = Time.realtimeSinceStartupAsDouble;
+            var result = _planner.PlanCompiled(
+                WorldState,
+                executableActions,
+                CurrentGoal,
+                _domain.Compile(),
+                _plannerSettings);
+            var planningMilliseconds = (Time.realtimeSinceStartupAsDouble - startedAt) * 1000d;
+            GoapPlanningScheduler.Report(
+                planningMilliseconds,
+                result.Success,
+                result.Plan?.ExpandedStates ?? 0);
             if (!result.Success)
             {
                 LastPlan = null;
@@ -479,7 +511,10 @@ namespace Practice.GOAP
             }
             else if (!behaviour.CanStart(context))
             {
-                failureReason = "executor rejected the current scene state";
+                var executorDiagnostic = behaviour.EvaluateStart(context);
+                failureReason = executorDiagnostic.CanStart
+                    ? "executor rejected the scene state after the preflight check"
+                    : executorDiagnostic.Message;
             }
 
             if (failureReason != null)
@@ -508,6 +543,7 @@ namespace Practice.GOAP
             var completedAction = CurrentAction;
             var completedContext = _runningContext;
             var status = _runningBehaviour.Status;
+            var failureReason = _runningBehaviour.LastFailureReason;
             _actionRoutine = null;
             _runningBehaviour = null;
             _runningContext = null;
@@ -529,8 +565,10 @@ namespace Practice.GOAP
             {
                 _pendingActions.Clear();
                 _replanRequested = true;
-                StatusMessage = $"Failed: {completedAction.DisplayName}";
-                AddTrace(GoapTraceEventType.ActionFailed, completedAction.DisplayName);
+                StatusMessage = string.IsNullOrWhiteSpace(failureReason)
+                    ? $"Failed: {completedAction.DisplayName}"
+                    : $"Failed: {completedAction.DisplayName}: {failureReason}";
+                AddTrace(GoapTraceEventType.ActionFailed, StatusMessage);
             }
 
             ActionChanged?.Invoke(this);
@@ -563,6 +601,8 @@ namespace Practice.GOAP
         private void CompleteGoal()
         {
             var completedGoal = CurrentGoal;
+            GoapPlanningScheduler.Cancel(GetInstanceID());
+            PlanningDeferred = false;
             CancelCurrentAction($"Goal achieved: {completedGoal.DisplayName}");
             CurrentGoal = null;
             LastCompletedGoal = completedGoal;
@@ -603,10 +643,7 @@ namespace Practice.GOAP
 
             foreach (var action in GetAvailableActions().Where(action => action != null))
             {
-                _actionDiagnostics.Add(GoapDiagnosticUtility.EvaluateAction(
-                    action,
-                    WorldState,
-                    FindBehaviour(action) != null));
+                _actionDiagnostics.Add(EvaluateActionDiagnostic(action));
             }
 
             _goalDiagnostics.Clear();
@@ -656,10 +693,7 @@ namespace Practice.GOAP
 
             var actions = GetAvailableActions()
                 .Where(action => action != null)
-                .Select(action => GoapDiagnosticUtility.EvaluateAction(
-                    action,
-                    WorldState,
-                    FindBehaviour(action) != null))
+                .Select(EvaluateActionDiagnostic)
                 .ToArray();
             var goals = GetAvailableGoals()
                 .Where(goal => goal != null)
@@ -693,6 +727,22 @@ namespace Practice.GOAP
             {
                 _decisionSnapshots.RemoveAt(0);
             }
+        }
+
+        private GoapActionDiagnostic EvaluateActionDiagnostic(GoapActionDefinition action)
+        {
+            var behaviour = FindBehaviour(action);
+            if (behaviour == null)
+            {
+                return GoapDiagnosticUtility.EvaluateAction(action, WorldState, false);
+            }
+
+            var context = new GoapActionContext(this, action);
+            return GoapDiagnosticUtility.EvaluateAction(
+                action,
+                WorldState,
+                true,
+                behaviour.EvaluateStart(context));
         }
 
         private void Log(string message)

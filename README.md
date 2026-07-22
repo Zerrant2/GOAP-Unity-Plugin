@@ -349,6 +349,38 @@ Debugger показывает:
 
 В самом Planner Graph кнопка `Use Selected NPC` берёт Agent из текущего выбора Hierarchy. Переключатель `Follow Agent` разрешает графу автоматически менять Domain вслед за Runtime Debugger; отключите его, если хотите оставить открытым другой Domain.
 
+### Диагностика Executor
+
+Перед запуском Action компонент Executor выполняет проверку без изменения игровой сцены. Для встроенного Executor проверяются:
+
+- наличие и доступность Smart Object, вместимость резервации и позиция в очереди;
+- наличие `GoapInventory` и суммарное количество предметов для всех шагов `Inventory Remove`;
+- named target из `GoapAgentAuthoring`;
+- наличие, состояние и полный путь `NavMeshAgent`;
+- наличие `Animator` и Trigger-параметра;
+- наличие `GoapActionEventReceiver` и события с нужным ID;
+- корректность порядка и параметров каждого шага Sequence.
+
+Результат имеет состояние `Ready`, `Warning` или `Blocked`, код (`InventoryInsufficient`, `SmartObjectReserved`, `NavMeshPathInvalid` и другие) и сообщение. `Warning` не запрещает запуск: например, при отсутствии `NavMeshAgent` встроенный Executor сообщает о переходе на прямое движение. Проверка резервирования не занимает Smart Object и не добавляет NPC в очередь.
+
+Пользовательский Executor может предоставить такую же диагностику:
+
+```csharp
+public override GoapExecutorDiagnostic EvaluateStart(GoapActionContext context)
+{
+    if (!TryGetComponent<MyRequiredComponent>(out _))
+    {
+        return GoapExecutorDiagnostic.Blocked(
+            GoapExecutorIssueCode.RequiredComponentMissing,
+            "MyRequiredComponent is missing");
+    }
+
+    return GoapExecutorDiagnostic.Ready();
+}
+```
+
+После фактического сбоя Executor сохраняет `LastFailureReason`. Agent добавляет эту причину в Status, Snapshot и Decision History.
+
 ## Валидация
 
 Редактор проверяет:
@@ -374,11 +406,22 @@ Debugger показывает:
 Поиск можно отменить через `CancellationToken`. В Unity Profiler доступны маркеры:
 
 - `GOAP.Plan`;
+- `GOAP.Plan.CompileState`;
+- `GOAP.Plan.Search`;
 - `GOAP.Agent.Decision`;
 - `GOAP.Agent.Sensors`;
+- `GOAP.Scheduler.BudgetCheck`;
 - `GOAP.Benchmark.SpawnAgents`.
 
 Команда `Tools > GOAP > Build Benchmark Scenes` создаёт сцены на 10, 100 и 500 NPC в `Assets/GOAP/Demo/Benchmarks`.
+
+Окно `Tools > GOAP > Benchmark Dashboard` открывает эти сцены и показывает live-метрики: среднее время поиска, медиану, p95, максимум, количество раскрытых состояний, FPS, пиковую стоимость планирования за кадр и число отложенных запросов. Кнопка `Copy Summary` копирует готовую сводку замера.
+
+В `GoapBenchmarkRunner` и Dashboard доступны два режима. `LogicOnly` отключает визуальные Renderer-компоненты и подходит для чистого замера GOAP. `Visual` показывает агентов сеткой: ожидающие, выполняющие действие и завершившие цель NPC получают разные цвета. После смены режима в Dashboard нажмите `Apply Settings`.
+
+`GoapPlanningScheduler` ограничивает глобальную нагрузку от одновременного перепланирования. По умолчанию за кадр разрешено не более 16 поисков и 4 мс суммарного времени поиска; остальные агенты остаются в очереди до следующего decision tick. В benchmark-сценах бюджет можно менять в компоненте `GoapBenchmarkRunner` или прямо в Dashboard. Ограничение отключаемое и не меняет найденный A*-план, только распределяет запуски поиска по кадрам.
+
+Во время поиска Planner использует внутреннее индексированное состояние: Boolean Facts упакованы в `ulong`-битсеты, а Int, Float и Enum хранятся в компактном массиве. Это состояние одновременно служит неизменяемым ключом A*, поэтому для каждого узла не создаётся отдельный массив ключа. `GoapCompiledDomain` переиспользует layout и скомпилированные Preconditions/Effects/Goal State между всеми NPC одного Domain. Публичный `GoapWorldState` остаётся типизированным и совместимым с Sensors, Executors и пользовательским кодом.
 
 ## Тесты
 

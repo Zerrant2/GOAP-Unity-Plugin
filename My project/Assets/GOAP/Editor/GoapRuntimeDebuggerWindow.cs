@@ -238,8 +238,10 @@ namespace Practice.GOAP.Editor
                 $"{goals.Count(item => item.Satisfied)} satisfied, {goals.Count(item => !item.Active)} inactive");
             EditorGUILayout.LabelField(
                 "Actions",
-                $"{actions.Count(item => item.Executable)} ready, " +
+                $"{actions.Count(item => item.Executable && item.ExecutorDiagnostic.Status == GoapExecutorDiagnosticStatus.Ready)} ready, " +
+                $"{actions.Count(item => item.PreconditionsSatisfied && item.ExecutorDiagnostic.Status == GoapExecutorDiagnosticStatus.Warning)} warnings, " +
                 $"{actions.Count(item => item.HasExecutor && !item.PreconditionsSatisfied)} waiting, " +
+                $"{actions.Count(item => item.HasExecutor && item.PreconditionsSatisfied && !item.ExecutorDiagnostic.CanStart)} blocked, " +
                 $"{actions.Count(item => !item.HasExecutor)} without executor");
 
             var blocked = actions.Where(item => !item.Executable).Take(4).ToArray();
@@ -368,11 +370,15 @@ namespace Practice.GOAP.Editor
                 _actionFoldouts.TryGetValue(key, out var expanded);
                 var state = item.Action == ViewedAction
                     ? "RUNNING"
-                    : item.Executable
-                        ? "READY"
-                        : item.HasExecutor
+                    : !item.HasExecutor
+                        ? "NO EXECUTOR"
+                        : !item.PreconditionsSatisfied
                             ? "WAITING"
-                            : "NO EXECUTOR";
+                            : item.ExecutorDiagnostic.Status == GoapExecutorDiagnosticStatus.Blocked
+                                ? "BLOCKED"
+                                : item.ExecutorDiagnostic.Status == GoapExecutorDiagnosticStatus.Warning
+                                    ? "WARNING"
+                                    : "READY";
 
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
@@ -396,6 +402,12 @@ namespace Practice.GOAP.Editor
                     EditorGUILayout.LabelField(
                         "Executor",
                         item.HasExecutor ? executor : $"Missing: {executor}");
+                    if (item.HasExecutor)
+                    {
+                        EditorGUILayout.LabelField(
+                            "Preflight",
+                            $"{item.ExecutorDiagnostic.Status} | {item.ExecutorDiagnostic.Code}");
+                    }
                     DrawConditionGroup("Preconditions", item.Preconditions);
                 }
 

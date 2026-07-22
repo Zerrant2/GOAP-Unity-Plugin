@@ -35,6 +35,19 @@ namespace Practice.GOAP
     {
         [SerializeField] private List<GoapNamedEvent> _events = new();
 
+        public bool HasEvent(string id)
+        {
+            foreach (var namedEvent in _events)
+            {
+                if (namedEvent != null && string.Equals(namedEvent.Id, id, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool Invoke(string id)
         {
             foreach (var namedEvent in _events)

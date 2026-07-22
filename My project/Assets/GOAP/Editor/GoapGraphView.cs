@@ -416,6 +416,22 @@ namespace Practice.GOAP.Editor
                 blockedNode.tooltip = BuildRuntimeTooltip(diagnostic.Action.Description, detail);
             }
 
+            foreach (var diagnostic in diagnostics.Values.Where(item =>
+                         item.Executable &&
+                         item.ExecutorDiagnostic.Status == GoapExecutorDiagnosticStatus.Warning))
+            {
+                if (!_nodes.TryGetValue(diagnostic.Action, out var warningNode))
+                {
+                    continue;
+                }
+
+                var color = new Color(1f, 0.62f, 0.16f);
+                var detail = GetActionRuntimeDetail(diagnostic);
+                SetNodeAccent(warningNode, color);
+                SetRuntimeBadge(warningNode, "WARNING", color, detail);
+                warningNode.tooltip = BuildRuntimeTooltip(diagnostic.Action.Description, detail);
+            }
+
             foreach (var fact in _domain.Facts.Where(fact => fact != null))
             {
                 var value = GetRuntimeValue(fact);
@@ -1340,7 +1356,14 @@ namespace Practice.GOAP.Editor
                 .Where(condition => !condition.Satisfied)
                 .Select(condition => condition.Reason)
                 .ToArray();
-            return unmet.Length == 0 ? "Ready now" : string.Join("\n", unmet);
+            if (unmet.Length > 0)
+            {
+                return string.Join("\n", unmet);
+            }
+
+            return diagnostic.ExecutorDiagnostic.Code == GoapExecutorIssueCode.None
+                ? diagnostic.ExecutorDiagnostic.Message
+                : $"[{diagnostic.ExecutorDiagnostic.Code}] {diagnostic.ExecutorDiagnostic.Message}";
         }
 
         private static void SetRuntimeBadge(

@@ -168,9 +168,5 @@ namespace Practice.GOAP
                 new Dictionary<GoapFact, GoapValue>(_dynamicValues));
         }
 
-        internal GoapStateKey BuildKey(IReadOnlyList<GoapFact> orderedFacts)
-        {
-            return new GoapStateKey(this, orderedFacts);
-        }
     }
 }

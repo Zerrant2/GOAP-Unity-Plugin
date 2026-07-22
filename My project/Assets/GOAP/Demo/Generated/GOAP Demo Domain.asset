@@ -858,16 +858,16 @@ MonoBehaviour:
     _position: {x: 475, y: 314}
   - _definitionId: a1cb15efd6394de6b8ee4432f5bccb6d
     _kind: 2
-    _position: {x: 60, y: 819.5}
+    _position: {x: 40, y: 1060}
   - _definitionId: 09416cf1f805447693afe90269f1fc98
     _kind: 2
-    _position: {x: 915, y: 899}
+    _position: {x: 40, y: 1190}
   - _definitionId: db87df6f33dc43aabf32c56cc0aa0b14
     _kind: 0
-    _position: {x: 475, y: 782}
+    _position: {x: 390, y: 1040}
   - _definitionId: 9c2d0f7c52ab45888c7d9b2ac84bfa18
     _kind: 1
-    _position: {x: 1330, y: 899}
+    _position: {x: 760, y: 1040}
   - _definitionId: 04d5c545b9714874862e890b8a44c119
     _kind: 2
     _position: {x: 60, y: 342.5}

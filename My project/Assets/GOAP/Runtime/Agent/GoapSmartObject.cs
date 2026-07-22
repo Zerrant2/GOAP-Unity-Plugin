@@ -128,6 +128,28 @@ namespace Practice.GOAP
             return false;
         }
 
+        public int GetQueuePosition(GoapAgent agent)
+        {
+            RemoveExpiredReservations();
+            if (agent == null)
+            {
+                return 0;
+            }
+
+            var position = 1;
+            foreach (var request in _reservationQueue)
+            {
+                if (request.Agent == agent)
+                {
+                    return position;
+                }
+
+                position++;
+            }
+
+            return 0;
+        }
+
         public void CancelReservationRequest(GoapAgent agent)
         {
             if (agent == null || _reservationQueue.Count == 0)

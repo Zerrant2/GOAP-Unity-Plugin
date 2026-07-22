@@ -70,6 +70,69 @@ namespace Practice.GOAP
         }
     }
 
+    public enum GoapExecutorDiagnosticStatus
+    {
+        Ready,
+        Warning,
+        Blocked
+    }
+
+    public enum GoapExecutorIssueCode
+    {
+        None,
+        MissingExecutor,
+        ExecutorDisabled,
+        InvalidConfiguration,
+        SmartObjectNotFound,
+        SmartObjectReserved,
+        TargetMissing,
+        InventoryMissing,
+        InventoryInsufficient,
+        NavMeshAgentMissing,
+        NavMeshAgentDisabled,
+        NavMeshNotReady,
+        NavMeshPathInvalid,
+        AnimatorMissing,
+        AnimatorTriggerMissing,
+        EventReceiverMissing,
+        EventMissing,
+        RequiredComponentMissing,
+        Unknown
+    }
+
+    public readonly struct GoapExecutorDiagnostic
+    {
+        public GoapExecutorDiagnosticStatus Status { get; }
+        public GoapExecutorIssueCode Code { get; }
+        public string Message { get; }
+        public bool CanStart => Status != GoapExecutorDiagnosticStatus.Blocked;
+
+        private GoapExecutorDiagnostic(
+            GoapExecutorDiagnosticStatus status,
+            GoapExecutorIssueCode code,
+            string message)
+        {
+            Status = status;
+            Code = code;
+            Message = string.IsNullOrWhiteSpace(message) ? "Ready now" : message;
+        }
+
+        public static GoapExecutorDiagnostic Ready(string message = "Ready now")
+        {
+            return new GoapExecutorDiagnostic(GoapExecutorDiagnosticStatus.Ready, GoapExecutorIssueCode.None, message);
+        }
+
+        public static GoapExecutorDiagnostic Warning(GoapExecutorIssueCode code, string message)
+        {
+            return new GoapExecutorDiagnostic(GoapExecutorDiagnosticStatus.Warning, code, message);
+        }
+
+        public static GoapExecutorDiagnostic Blocked(GoapExecutorIssueCode code, string message)
+        {
+            return new GoapExecutorDiagnostic(GoapExecutorDiagnosticStatus.Blocked, code, message);
+        }
+    }
+
     public readonly struct GoapActionDiagnostic
     {
         private readonly IReadOnlyList<GoapConditionDiagnostic> _preconditions;
@@ -77,8 +140,9 @@ namespace Practice.GOAP
         public GoapActionDefinition Action { get; }
         public bool HasExecutor { get; }
         public bool PreconditionsSatisfied { get; }
-        public bool Executable => HasExecutor && PreconditionsSatisfied;
+        public bool Executable => HasExecutor && PreconditionsSatisfied && ExecutorDiagnostic.CanStart;
         public string Reason { get; }
+        public GoapExecutorDiagnostic ExecutorDiagnostic { get; }
         public IReadOnlyList<GoapConditionDiagnostic> Preconditions =>
             _preconditions ?? Array.Empty<GoapConditionDiagnostic>();
 
@@ -86,9 +150,27 @@ namespace Practice.GOAP
             GoapActionDefinition action,
             bool hasExecutor,
             IEnumerable<GoapConditionDiagnostic> preconditions)
+            : this(
+                action,
+                hasExecutor,
+                hasExecutor
+                    ? GoapExecutorDiagnostic.Ready()
+                    : GoapExecutorDiagnostic.Blocked(
+                        GoapExecutorIssueCode.MissingExecutor,
+                        "No matching executor"),
+                preconditions)
+        {
+        }
+
+        public GoapActionDiagnostic(
+            GoapActionDefinition action,
+            bool hasExecutor,
+            GoapExecutorDiagnostic executorDiagnostic,
+            IEnumerable<GoapConditionDiagnostic> preconditions)
         {
             Action = action;
             HasExecutor = hasExecutor;
+            ExecutorDiagnostic = executorDiagnostic;
             _preconditions = (preconditions ?? Array.Empty<GoapConditionDiagnostic>()).ToArray();
             PreconditionsSatisfied = _preconditions.All(item => item.Satisfied);
             if (!hasExecutor)
@@ -98,9 +180,14 @@ namespace Practice.GOAP
             }
 
             var unmet = _preconditions.Where(item => !item.Satisfied).ToArray();
-            Reason = unmet.Length == 0
-                ? "Ready now"
-                : $"{unmet.Length} unmet: {unmet[0].Reason}";
+            if (unmet.Length > 0)
+            {
+                Reason = $"{unmet.Length} unmet: {unmet[0].Reason}";
+            }
+            else
+            {
+                Reason = executorDiagnostic.Message;
+            }
         }
     }
 
@@ -264,10 +351,27 @@ namespace Practice.GOAP
             GoapWorldState worldState,
             bool hasExecutor)
         {
+            return EvaluateAction(
+                action,
+                worldState,
+                hasExecutor,
+                hasExecutor
+                    ? GoapExecutorDiagnostic.Ready()
+                    : GoapExecutorDiagnostic.Blocked(
+                        GoapExecutorIssueCode.MissingExecutor,
+                        "No matching executor"));
+        }
+
+        public static GoapActionDiagnostic EvaluateAction(
+            GoapActionDefinition action,
+            GoapWorldState worldState,
+            bool hasExecutor,
+            GoapExecutorDiagnostic executorDiagnostic)
+        {
             var conditions = action == null
                 ? Array.Empty<GoapConditionDiagnostic>()
                 : action.Preconditions.Select(condition => EvaluateCondition(condition, worldState));
-            return new GoapActionDiagnostic(action, hasExecutor, conditions);
+            return new GoapActionDiagnostic(action, hasExecutor, executorDiagnostic, conditions);
         }
 
         public static GoapGoalDiagnostic EvaluateGoal(

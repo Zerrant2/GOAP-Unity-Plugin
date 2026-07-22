@@ -126,6 +126,72 @@ namespace Practice.GOAP.Tests
         }
 
         [Test]
+        public void FloatFactsSupportComparisonAndSubtractEffects()
+        {
+            var heat = ScriptableObject.CreateInstance<GoapFact>();
+            heat.ConfigureFloat("Heat", 3f);
+            _created.Add(heat);
+            var coolDown = Action(
+                "Cool Down",
+                1f,
+                "cool-down",
+                new[] { new GoapCondition(heat, 1.5f, GoapComparison.Greater) },
+                new[]
+                {
+                    new GoapCondition(
+                        heat,
+                        0.75f,
+                        GoapComparison.Equal,
+                        GoapEffectOperation.Subtract)
+                });
+            var goal = Goal(
+                "Comfortable",
+                10,
+                null,
+                new[] { new GoapCondition(heat, 1.5f, GoapComparison.LessOrEqual) });
+
+            var result = new GoapPlanner().Plan(new GoapWorldState(), new[] { coolDown }, goal);
+
+            Assert.That(result.Success, Is.True, result.Message);
+            Assert.That(result.Plan.Actions, Is.EqualTo(new[] { coolDown, coolDown }));
+        }
+
+        [Test]
+        public void BooleanPlannerStateSupportsMoreThanOneBitsetWord()
+        {
+            var facts = new List<GoapFact>();
+            for (var index = 0; index < 70; index++)
+            {
+                facts.Add(Fact($"Flag {index}", false));
+            }
+
+            var target = facts[^1];
+            var effects = facts
+                .Select(fact => new GoapCondition(fact, fact == target))
+                .ToArray();
+            var enable = Action("Enable Last Flag", 1f, "enable-last", null, effects);
+            var goal = Goal("Last Flag Enabled", 10, null, Conditions((target, true)));
+            var domain = ScriptableObject.CreateInstance<GoapDomain>();
+            _created.Add(domain);
+            foreach (var fact in facts)
+            {
+                domain.AddFact(fact);
+            }
+
+            domain.AddAction(enable);
+            domain.AddGoal(goal);
+
+            var result = new GoapPlanner().PlanCompiled(
+                domain.CreateDefaultState(),
+                new[] { enable },
+                goal,
+                domain.Compile());
+
+            Assert.That(result.Success, Is.True, result.Message);
+            Assert.That(result.Plan.Actions, Is.EqualTo(new[] { enable }));
+        }
+
+        [Test]
         public void SmartObjectReservationPreventsTwoAgentsFromClaimingOneTarget()
         {
             var targetObject = new GameObject("Tree");
@@ -257,6 +323,62 @@ namespace Practice.GOAP.Tests
             Assert.That(diagnostic.Preconditions[0].Requirement, Is.EqualTo("Wood >= 3"));
             Assert.That(diagnostic.Preconditions[0].Actual, Is.EqualTo("1"));
             StringAssert.Contains("actual 1", diagnostic.Reason);
+        }
+
+        [Test]
+        public void BuiltInExecutorReportsCumulativeInventoryShortage()
+        {
+            var agentObject = new GameObject("Inventory Diagnostic Agent");
+            try
+            {
+                var inventory = agentObject.AddComponent<GoapInventory>();
+                inventory.SetAmount("Wood", 1);
+                var behaviour = agentObject.AddComponent<GoapBuiltInActionBehaviour>();
+                var agent = agentObject.AddComponent<GoapAgent>();
+                var action = Action("Build", 1f, string.Empty, null, null);
+                action.ConfigureExecutionSteps(new[]
+                {
+                    GoapActionStep.Inventory(GoapActionStepKind.InventoryRemove, "Wood", 1),
+                    GoapActionStep.Inventory(GoapActionStepKind.InventoryRemove, "Wood", 1)
+                });
+
+                var diagnostic = behaviour.EvaluateStart(new GoapActionContext(agent, action));
+
+                Assert.That(diagnostic.Status, Is.EqualTo(GoapExecutorDiagnosticStatus.Blocked));
+                Assert.That(diagnostic.Code, Is.EqualTo(GoapExecutorIssueCode.InventoryInsufficient));
+                StringAssert.Contains("has 1", diagnostic.Message);
+                StringAssert.Contains("requires 2", diagnostic.Message);
+            }
+            finally
+            {
+                Object.DestroyImmediate(agentObject);
+            }
+        }
+
+        [Test]
+        public void BuiltInExecutorReportsMissingEventReceiver()
+        {
+            var agentObject = new GameObject("Event Diagnostic Agent");
+            try
+            {
+                var behaviour = agentObject.AddComponent<GoapBuiltInActionBehaviour>();
+                var agent = agentObject.AddComponent<GoapAgent>();
+                var action = Action("Open Door", 1f, string.Empty, null, null);
+                action.ConfigureExecutionSteps(new[]
+                {
+                    GoapActionStep.Event(GoapActionStepKind.InvokeEvent, "OpenDoor")
+                });
+
+                var diagnostic = behaviour.EvaluateStart(new GoapActionContext(agent, action));
+
+                Assert.That(diagnostic.Status, Is.EqualTo(GoapExecutorDiagnosticStatus.Blocked));
+                Assert.That(diagnostic.Code, Is.EqualTo(GoapExecutorIssueCode.EventReceiverMissing));
+                StringAssert.Contains("GoapActionEventReceiver", diagnostic.Message);
+            }
+            finally
+            {
+                Object.DestroyImmediate(agentObject);
+            }
         }
 
         [Test]

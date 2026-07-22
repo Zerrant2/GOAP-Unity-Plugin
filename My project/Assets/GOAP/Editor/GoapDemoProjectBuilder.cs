@@ -19,7 +19,12 @@ namespace Practice.GOAP.Editor
         public const string SurvivorProfilePath = "Assets/GOAP/Demo/Generated/Survivor Profile.asset";
         public const string ScenePath = "Assets/GOAP/Demo/Scenes/GOAP Demo.unity";
         public const string BenchmarkFolder = "Assets/GOAP/Demo/Benchmarks";
-        private const string InitialBuildSessionKey = "Practice.GOAP.InitialDemoBuildV2";
+        private const string InitialBuildSessionKey = "Practice.GOAP.InitialDemoBuildV4";
+        private const string GeneratedContentVersionKeyPrefix = "Practice.GOAP.GeneratedContentVersion";
+        private const int GeneratedContentVersion = 4;
+
+        private static string GeneratedContentVersionKey =>
+            $"{GeneratedContentVersionKeyPrefix}.{Application.dataPath}";
 
         [InitializeOnLoadMethod]
         private static void ScheduleInitialBuild()
@@ -33,7 +38,8 @@ namespace Practice.GOAP.Editor
             EditorApplication.delayCall += () =>
             {
                 if (!EditorApplication.isPlayingOrWillChangePlaymode &&
-                    (AssetDatabase.LoadAssetAtPath<GoapDomain>(DomainPath) == null ||
+                    (EditorPrefs.GetInt(GeneratedContentVersionKey, 0) < GeneratedContentVersion ||
+                     AssetDatabase.LoadAssetAtPath<GoapDomain>(DomainPath) == null ||
                      AssetDatabase.LoadAssetAtPath<GoapAgentProfile>(LumberjackProfilePath) == null ||
                      AssetDatabase.LoadAssetAtPath<GoapAgentProfile>(WorkerProfilePath) == null ||
                      AssetDatabase.LoadAssetAtPath<GoapAgentProfile>(ResidentProfilePath) == null ||
@@ -66,6 +72,7 @@ namespace Practice.GOAP.Editor
             EnsureSceneInBuildSettings();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            EditorPrefs.SetInt(GeneratedContentVersionKey, GeneratedContentVersion);
             Selection.activeObject = domain;
             Debug.Log($"GOAP demo is ready. Open '{ScenePath}' and enter Play Mode.", domain);
         }
@@ -647,7 +654,7 @@ namespace Practice.GOAP.Editor
             return gameObject;
         }
 
-        private static Material EnsureMaterial(string name, Color color)
+        private static Material EnsureMaterial(string name, Color color, bool enableInstancing = false)
         {
             EnsureFolder("Assets/GOAP/Demo/Generated/Materials");
             var safeName = new string(name.Select(character => char.IsLetterOrDigit(character) ? character : '_').ToArray());
@@ -661,6 +668,7 @@ namespace Practice.GOAP.Editor
             }
 
             material.color = color;
+            material.enableInstancing = enableInstancing;
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -704,11 +712,38 @@ namespace Practice.GOAP.Editor
 
             var root = new GameObject($"GOAP Benchmark {agentCount}");
             SceneManager.MoveGameObjectToScene(root, benchmarkScene);
-            root.AddComponent<GoapBenchmarkRunner>().Configure(profile, agentCount);
-            var sharedResource = new GameObject("Shared Wood Resource");
-            sharedResource.transform.SetParent(root.transform);
+            var runner = root.AddComponent<GoapBenchmarkRunner>();
+            runner.Configure(profile, agentCount);
+
+            const float spacing = 1.25f;
+            var columns = Mathf.CeilToInt(Mathf.Sqrt(agentCount));
+            var rows = Mathf.CeilToInt((float)agentCount / columns);
+            var width = Mathf.Max(5f, (columns - 1) * spacing + 3f);
+            var depth = Mathf.Max(5f, (rows - 1) * spacing + 3f);
+            var floor = CreateVisual(
+                "Benchmark Floor",
+                PrimitiveType.Plane,
+                Vector3.zero,
+                new Vector3(width / 10f, 1f, depth / 10f),
+                new Color(0.13f, 0.15f, 0.17f),
+                root.transform);
+            var sharedResource = CreateVisual(
+                "Shared Wood Resource",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 1f, 0f),
+                new Vector3(0.7f, 1f, 0.7f),
+                new Color(0.18f, 0.66f, 0.32f),
+                root.transform);
             sharedResource.AddComponent<GoapSmartObject>().Configure("Wood", false, agentCount);
-            CreateCameraAndLight(root.transform);
+
+            runner.ConfigureVisualization(
+                EnsureMaterial("Benchmark Idle", new Color(0.42f, 0.47f, 0.53f), true),
+                EnsureMaterial("Benchmark Queued", new Color(0.96f, 0.64f, 0.12f), true),
+                EnsureMaterial("Benchmark Active", new Color(0.12f, 0.7f, 0.95f), true),
+                EnsureMaterial("Benchmark Completed", new Color(0.2f, 0.82f, 0.42f), true),
+                floor.GetComponent<Renderer>(),
+                sharedResource.GetComponent<Renderer>());
+            CreateBenchmarkCameraAndLight(root.transform, width, depth);
             EditorSceneManager.SaveScene(benchmarkScene, path);
 
             if ((sceneAsset == null || !wasLoaded) && createMode != NewSceneMode.Single)
@@ -720,6 +755,30 @@ namespace Practice.GOAP.Editor
             {
                 SceneManager.SetActiveScene(previousActiveScene);
             }
+        }
+
+        private static void CreateBenchmarkCameraAndLight(Transform parent, float width, float depth)
+        {
+            var extent = Mathf.Max(width, depth);
+            var cameraObject = new GameObject("Main Camera");
+            cameraObject.transform.SetParent(parent);
+            cameraObject.tag = "MainCamera";
+            cameraObject.transform.position = new Vector3(0f, Mathf.Max(12f, extent * 1.05f), -extent * 0.7f);
+            cameraObject.transform.LookAt(Vector3.zero);
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = Mathf.Max(depth * 0.62f, width * 0.38f) + 2f;
+            camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = Mathf.Max(100f, extent * 4f);
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.055f, 0.07f, 0.09f);
+
+            var lightObject = new GameObject("Directional Light");
+            lightObject.transform.SetParent(parent);
+            lightObject.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.15f;
         }
 
         private static bool PrepareForNewScene(out NewSceneMode createMode)
