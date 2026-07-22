@@ -606,6 +606,17 @@ namespace Practice.GOAP.Editor
                 ? action.BuiltInExecution.Mode.ToString()
                 : string.IsNullOrWhiteSpace(action.ExecutorId) ? "Missing" : action.ExecutorId;
             node.extensionContainer.Add(CreateMetaLabel($"Cost {action.Cost:0.##} | Executor: {executor}"));
+            var contextMeta = action.InterruptionPolicy.ToString();
+            if (action.TryGetPlanningTarget(out var target))
+            {
+                contextMeta += $" | {target.Mode}: {target.Identifier}";
+                if (action.DistanceCostPerUnit > 0f)
+                {
+                    contextMeta += $" | Distance x{action.DistanceCostPerUnit:0.##}";
+                }
+            }
+
+            node.extensionContainer.Add(CreateMetaLabel(contextMeta));
             node.extensionContainer.Add(CreateConditionBlock("Requires", action.Preconditions, new Color(0.88f, 0.72f, 0.3f)));
             node.extensionContainer.Add(CreateConditionBlock("Changes", action.Effects, new Color(0.38f, 0.82f, 0.58f)));
             node.RefreshExpandedState();
@@ -626,7 +637,18 @@ namespace Practice.GOAP.Editor
             node.inputContainer.Add(desired);
             TrackConnectionPort(activation);
             TrackConnectionPort(desired);
-            node.extensionContainer.Add(CreateMetaLabel($"Priority {goal.Priority}"));
+            var selectionMeta = $"Base score {goal.Priority}";
+            if (goal.ScoreModifiers.Count > 0)
+            {
+                selectionMeta += $" | {goal.ScoreModifiers.Count} modifier(s)";
+            }
+
+            if (goal.CooldownSeconds > 0f)
+            {
+                selectionMeta += $" | {goal.CooldownSeconds:0.#}s cooldown";
+            }
+
+            node.extensionContainer.Add(CreateMetaLabel(selectionMeta));
             node.extensionContainer.Add(CreateConditionBlock("Active when", goal.ActivationConditions, new Color(0.88f, 0.72f, 0.3f)));
             node.extensionContainer.Add(CreateConditionBlock("Wants", goal.DesiredState, new Color(0.4f, 0.74f, 1f)));
             node.RefreshExpandedState();

@@ -67,6 +67,25 @@ namespace Practice.GOAP.Tests
         }
 
         [Test]
+        public void PlannerUsesRuntimeActionCostResolver()
+        {
+            var ready = Fact("Ready", false);
+            var normallyCheap = Action("Normally Cheap", 1f, "cheap", null, Conditions((ready, true)));
+            var contextuallyCheap = Action("Contextually Cheap", 5f, "context", null, Conditions((ready, true)));
+            var goal = Goal("Ready", 1, null, Conditions((ready, true)));
+
+            var result = new GoapPlanner().Plan(
+                new GoapWorldState(),
+                new[] { normallyCheap, contextuallyCheap },
+                goal,
+                actionCostResolver: action => action == normallyCheap ? 20f : 6f);
+
+            Assert.That(result.Success, Is.True, result.Message);
+            Assert.That(result.Plan.Actions, Is.EqualTo(new[] { contextuallyCheap }));
+            Assert.That(result.Plan.TotalCost, Is.EqualTo(6f));
+        }
+
+        [Test]
         public void ReportsGoalWithNoProducer()
         {
             var safe = Fact("Safe", false);
@@ -298,6 +317,102 @@ namespace Practice.GOAP.Tests
             var selected = new GoapGoalSelector().Select(state, new[] { eatGoal, surviveGoal });
 
             Assert.That(selected, Is.SameAs(surviveGoal));
+        }
+
+        [Test]
+        public void GoalSelectorUsesFactDrivenScoreModifiers()
+        {
+            var hunger = ScriptableObject.CreateInstance<GoapFact>();
+            hunger.ConfigureFloat("Hunger", 0f);
+            _created.Add(hunger);
+            var fed = Fact("Fed", false);
+            var safe = Fact("Safe", false);
+            var eatGoal = Goal("Eat", 10, null, Conditions((fed, true)));
+            eatGoal.ConfigureSelection(
+                0f,
+                new[] { new GoapGoalScoreModifier(hunger, 0f, 100f, 0f, 100f) });
+            var safetyGoal = Goal("Find Safety", 50, null, Conditions((safe, true)));
+            var state = new GoapWorldState();
+            state.Set(hunger, 80f);
+
+            var result = new GoapGoalSelector().SelectDetailed(state, new[] { eatGoal, safetyGoal });
+
+            Assert.That(result.SelectedGoal, Is.SameAs(eatGoal));
+            Assert.That(result.SelectedEvaluation.BaseScore, Is.EqualTo(10f));
+            Assert.That(result.SelectedEvaluation.ModifierScore, Is.EqualTo(80f).Within(0.001f));
+            Assert.That(result.SelectedEvaluation.FinalScore, Is.EqualTo(90f).Within(0.001f));
+        }
+
+        [Test]
+        public void GoalSelectorHysteresisKeepsCurrentGoalUntilThresholdIsExceeded()
+        {
+            var firstDone = Fact("First Done", false);
+            var secondDone = Fact("Second Done", false);
+            var current = Goal("Current", 10, null, Conditions((firstDone, true)));
+            var challenger = Goal("Challenger", 12, null, Conditions((secondDone, true)));
+            var selector = new GoapGoalSelector();
+
+            var held = selector.SelectDetailed(
+                new GoapWorldState(),
+                new[] { current, challenger },
+                current,
+                3f);
+            var switched = selector.SelectDetailed(
+                new GoapWorldState(),
+                new[] { current, challenger },
+                current,
+                1f);
+
+            Assert.That(held.SelectedGoal, Is.SameAs(current));
+            Assert.That(switched.SelectedGoal, Is.SameAs(challenger));
+        }
+
+        [Test]
+        public void GoalSelectorExcludesGoalsOnCooldown()
+        {
+            var urgentDone = Fact("Urgent Done", false);
+            var fallbackDone = Fact("Fallback Done", false);
+            var urgent = Goal("Urgent", 100, null, Conditions((urgentDone, true)));
+            var fallback = Goal("Fallback", 10, null, Conditions((fallbackDone, true)));
+
+            var result = new GoapGoalSelector().SelectDetailed(
+                new GoapWorldState(),
+                new[] { urgent, fallback },
+                cooldownRemaining: goal => goal == urgent ? 2f : 0f);
+
+            Assert.That(result.SelectedGoal, Is.SameAs(fallback));
+            Assert.That(result.Find(urgent).OnCooldown, Is.True);
+            Assert.That(result.Find(urgent).Eligible, Is.False);
+        }
+
+        [Test]
+        public void ValidatorReportsInvalidDecisionConfiguration()
+        {
+            var done = Fact("Done", false);
+            var invalidTargetAction = Action(
+                "Invalid Target",
+                1f,
+                "invalid-target",
+                null,
+                Conditions((done, true)));
+            invalidTargetAction.ConfigureTargeting(GoapActionTargetMode.SmartObjectCategory);
+            var goal = Goal("Done", 10, null, Conditions((done, true)));
+            goal.ConfigureSelection(
+                0f,
+                new[] { new GoapGoalScoreModifier(done, 1f, 1f, 0f, 10f) });
+            var domain = ScriptableObject.CreateInstance<GoapDomain>();
+            _created.Add(domain);
+            domain.AddFact(done);
+            domain.AddAction(invalidTargetAction);
+            domain.AddGoal(goal);
+
+            var errors = GoapDomainValidator.Validate(domain)
+                .Where(issue => issue.Severity == GoapValidationSeverity.Error)
+                .Select(issue => issue.Message)
+                .ToArray();
+
+            Assert.That(errors.Any(message => message.Contains("without an identifier")), Is.True);
+            Assert.That(errors.Any(message => message.Contains("zero-sized Fact Range")), Is.True);
         }
 
         [Test]

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c8cf40c5ac2f94478ea02222e2d9fc9, type: 3}
+  m_Name: Builder Profile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapAgentProfile
+  _domain: {fileID: 11400000, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  _actions:
+  - {fileID: 4354566115408318690, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: 3544745240682367460, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: -3220110055539179099, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: -1726053375241208032, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: -4720879868081298042, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: 8843643256182616473, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  _goals:
+  - {fileID: -7710805599940698722, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: 1207967941370631981, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: 771039989642297132, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  - {fileID: 4699988901539057444, guid: 2d712de5e13ab3b498edeadc8c9731cd, type: 2}
+  _initialFacts: []
+  _sensors: []
+  _decisionInterval: 0.18
+  _goalSwitchThreshold: 5
+  _plannerSettings:
+    MaxExpandedStates: 5000
+    MaxPlanDepth: 32
+    MaxPlanningMilliseconds: 10
+  _logDecisions: 0

@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/GOAP/Demo/Scenes/GOAP Demo.unity
     guid: da606ce3b59ef5448aa824127a1026cf
+  - enabled: 1
+    path: Assets/GOAP/TechDemo/Scenes/GOAP Outpost.unity
+    guid: af3f6130b13eb244faed0f2843b96920
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

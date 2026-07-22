@@ -76,6 +76,91 @@ namespace Practice.GOAP.Tests
         }
 
         [UnityTest]
+        public IEnumerator FinishCurrentActionPolicyDefersHigherScoringGoal()
+        {
+            var urgent = Create<GoapFact>();
+            urgent.Configure("Urgent", false);
+            var routineDone = Create<GoapFact>();
+            routineDone.Configure("Routine Done", false);
+            var emergencyDone = Create<GoapFact>();
+            emergencyDone.Configure("Emergency Done", false);
+
+            var routineAction = Create<GoapActionDefinition>();
+            routineAction.Configure(
+                "Routine Action",
+                1f,
+                "routine",
+                null,
+                new[] { new GoapCondition(routineDone, true) });
+            routineAction.ConfigureInterruption(GoapActionInterruptionPolicy.FinishCurrentAction);
+            var emergencyAction = Create<GoapActionDefinition>();
+            emergencyAction.Configure(
+                "Emergency Action",
+                1f,
+                "emergency",
+                null,
+                new[] { new GoapCondition(emergencyDone, true) });
+
+            var routineGoal = Create<GoapGoalDefinition>();
+            routineGoal.Configure(
+                "Finish Routine",
+                10,
+                null,
+                new[] { new GoapCondition(routineDone, true) });
+            var emergencyGoal = Create<GoapGoalDefinition>();
+            emergencyGoal.Configure(
+                "Handle Emergency",
+                100,
+                new[] { new GoapCondition(urgent, true) },
+                new[] { new GoapCondition(emergencyDone, true) });
+
+            var domain = Create<GoapDomain>();
+            domain.AddFact(urgent);
+            domain.AddFact(routineDone);
+            domain.AddFact(emergencyDone);
+            domain.AddAction(routineAction);
+            domain.AddAction(emergencyAction);
+            domain.AddGoal(routineGoal);
+            domain.AddGoal(emergencyGoal);
+
+            var agentObject = new GameObject("Interruption Policy Agent");
+            _created.Add(agentObject);
+            var routineBehaviour = agentObject.AddComponent<GoapTimedTestActionBehaviour>();
+            routineBehaviour.SetExecutorId("routine");
+            routineBehaviour.Duration = 0.3f;
+            var emergencyBehaviour = agentObject.AddComponent<GoapImmediateTestActionBehaviour>();
+            emergencyBehaviour.SetExecutorId("emergency");
+            var agent = agentObject.AddComponent<GoapAgent>();
+            agent.Configure(domain, 0.02f, goalSwitchThreshold: 0f);
+
+            var timeout = Time.time + 1f;
+            while (Time.time < timeout && agent.CurrentAction != routineAction)
+            {
+                yield return null;
+            }
+
+            Assert.That(agent.CurrentAction, Is.SameAs(routineAction));
+            agent.SetFact(urgent, true);
+            yield return new WaitForSeconds(0.08f);
+
+            Assert.That(agent.CurrentAction, Is.SameAs(routineAction));
+            Assert.That(agent.CurrentGoal, Is.SameAs(routineGoal));
+            Assert.That(
+                agent.Trace.Any(item => item.Type == GoapTraceEventType.GoalSwitchDeferred),
+                Is.True);
+
+            timeout = Time.time + 1f;
+            while (Time.time < timeout && !agent.WorldState.Get(emergencyDone))
+            {
+                yield return null;
+            }
+
+            Assert.That(agent.WorldState.Get(routineDone), Is.True);
+            Assert.That(agent.WorldState.Get(emergencyDone), Is.True);
+            Assert.That(agent.LastCompletedGoal, Is.SameAs(emergencyGoal));
+        }
+
+        [UnityTest]
         public IEnumerator BuiltInActionGathersReservedResourceWithoutCustomExecutor()
         {
             var woodAvailable = Create<GoapFact>();
@@ -150,6 +235,74 @@ namespace Practice.GOAP.Tests
             Assert.That(inventory.GetAmount("Wood"), Is.EqualTo(1));
             Assert.That(tree.Available, Is.False);
             Assert.That(agent.LastCompletedGoal, Is.SameAs(goal));
+        }
+
+        [UnityTest]
+        public IEnumerator ContextualDistanceCostSelectsAndKeepsPlannedSmartObject()
+        {
+            var collected = Create<GoapFact>();
+            collected.Configure("Collected", false);
+
+            var nearAction = Create<GoapActionDefinition>();
+            nearAction.Configure(
+                "Use Near Source",
+                5f,
+                string.Empty,
+                null,
+                new[] { new GoapCondition(collected, true) });
+            nearAction.ConfigureBuiltInExecution(GoapBuiltInActionSettings.Interact("Near Source", 0f, true));
+            nearAction.ConfigureTargeting(GoapActionTargetMode.Automatic, distanceCostPerUnit: 1f);
+
+            var farAction = Create<GoapActionDefinition>();
+            farAction.Configure(
+                "Use Far Source",
+                1f,
+                string.Empty,
+                null,
+                new[] { new GoapCondition(collected, true) });
+            farAction.ConfigureBuiltInExecution(GoapBuiltInActionSettings.Interact("Far Source", 0f, true));
+            farAction.ConfigureTargeting(GoapActionTargetMode.Automatic, distanceCostPerUnit: 1f);
+
+            var goal = Create<GoapGoalDefinition>();
+            goal.Configure("Collect", 10, null, new[] { new GoapCondition(collected, true) });
+            var domain = Create<GoapDomain>();
+            domain.AddFact(collected);
+            domain.AddAction(nearAction);
+            domain.AddAction(farAction);
+            domain.AddGoal(goal);
+
+            var nearObject = new GameObject("Near Source");
+            nearObject.transform.position = Vector3.forward;
+            var near = nearObject.AddComponent<GoapSmartObject>();
+            near.Configure("Near Source", true);
+            _created.Add(nearObject);
+            var farObject = new GameObject("Far Source");
+            farObject.transform.position = Vector3.forward * 10f;
+            var far = farObject.AddComponent<GoapSmartObject>();
+            far.Configure("Far Source", true);
+            _created.Add(farObject);
+
+            var agentObject = new GameObject("Context Agent");
+            _created.Add(agentObject);
+            agentObject.AddComponent<GoapBuiltInActionBehaviour>();
+            var agent = agentObject.AddComponent<GoapAgent>();
+            agent.Configure(domain, 0.02f);
+
+            var timeout = Time.time + 2f;
+            while (Time.time < timeout &&
+                   (agent.WorldState == null || !agent.WorldState.Get(collected)))
+            {
+                yield return null;
+            }
+
+            Assert.That(agent.WorldState, Is.Not.Null);
+            Assert.That(agent.WorldState.Get(collected), Is.True);
+            Assert.That(near.Available, Is.False);
+            Assert.That(far.Available, Is.True);
+            Assert.That(
+                agent.Trace.Any(item => item.Type == GoapTraceEventType.ActionStarted &&
+                                        item.Message == nearAction.DisplayName),
+                Is.True);
         }
 
         [UnityTest]

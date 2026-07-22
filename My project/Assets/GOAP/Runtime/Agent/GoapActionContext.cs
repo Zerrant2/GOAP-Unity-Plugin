@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Practice.GOAP
 {
@@ -10,6 +11,9 @@ namespace Practice.GOAP
         public GoapAgent Agent { get; }
         public GoapActionDefinition Definition { get; }
         public GoapWorldState WorldState => Agent.WorldState;
+        public GoapSmartObject SmartObjectTarget { get; private set; }
+        public Transform NamedTarget { get; private set; }
+        public Transform Target => SmartObjectTarget != null ? SmartObjectTarget.transform : NamedTarget;
 
         public GoapActionContext(GoapAgent agent, GoapActionDefinition definition)
         {
@@ -54,6 +58,14 @@ namespace Practice.GOAP
             {
                 Agent.SetFact(pair.Key, pair.Value);
             }
+        }
+
+        internal void SetTarget(GoapActionTargetDescriptor descriptor, Transform target)
+        {
+            SmartObjectTarget = descriptor.Mode == GoapActionTargetMode.SmartObjectCategory
+                ? target != null ? target.GetComponent<GoapSmartObject>() : null
+                : null;
+            NamedTarget = descriptor.Mode == GoapActionTargetMode.NamedTarget ? target : null;
         }
     }
 }

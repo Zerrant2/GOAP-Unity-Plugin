@@ -4,10 +4,47 @@ using UnityEngine;
 
 namespace Practice.GOAP
 {
+    public enum GoapActionInterruptionPolicy
+    {
+        Immediate,
+        FinishCurrentAction,
+        FinishCurrentPlan
+    }
+
+    public enum GoapActionTargetMode
+    {
+        Automatic,
+        None,
+        SmartObjectCategory,
+        NamedTarget
+    }
+
+    public readonly struct GoapActionTargetDescriptor
+    {
+        public GoapActionTargetMode Mode { get; }
+        public string Identifier { get; }
+        public bool IncludeBusySmartObjects { get; }
+
+        public GoapActionTargetDescriptor(
+            GoapActionTargetMode mode,
+            string identifier,
+            bool includeBusySmartObjects)
+        {
+            Mode = mode;
+            Identifier = identifier ?? string.Empty;
+            IncludeBusySmartObjects = includeBusySmartObjects;
+        }
+    }
+
     [CreateAssetMenu(menuName = "GOAP/Action", fileName = "New Action")]
     public sealed class GoapActionDefinition : GoapDefinition
     {
         [SerializeField, Min(0.01f)] private float _cost = 1f;
+        [SerializeField] private GoapActionInterruptionPolicy _interruptionPolicy;
+        [SerializeField] private GoapActionTargetMode _targetMode = GoapActionTargetMode.Automatic;
+        [SerializeField] private string _planningTargetId = string.Empty;
+        [SerializeField] private bool _includeBusySmartObjects;
+        [SerializeField, Min(0f)] private float _distanceCostPerUnit;
         [SerializeField] private string _executorId;
         [SerializeField] private GoapBuiltInActionSettings _builtInExecution;
         [SerializeField] private List<GoapActionStep> _executionSteps = new();
@@ -15,6 +52,9 @@ namespace Practice.GOAP
         [SerializeField] private List<GoapCondition> _effects = new();
 
         public float Cost => Mathf.Max(0.01f, _cost);
+        public GoapActionInterruptionPolicy InterruptionPolicy => _interruptionPolicy;
+        public GoapActionTargetMode TargetMode => _targetMode;
+        public float DistanceCostPerUnit => Mathf.Max(0f, _distanceCostPerUnit);
         public string ExecutorId => _executorId;
         public GoapBuiltInActionSettings BuiltInExecution => _builtInExecution;
         public IReadOnlyList<GoapActionStep> ExecutionSteps => _executionSteps;
@@ -42,6 +82,81 @@ namespace Practice.GOAP
         public void ConfigureBuiltInExecution(GoapBuiltInActionSettings settings)
         {
             _builtInExecution = settings;
+        }
+
+        public void ConfigureInterruption(GoapActionInterruptionPolicy policy)
+        {
+            _interruptionPolicy = policy;
+        }
+
+        public void ConfigureTargeting(
+            GoapActionTargetMode mode,
+            string targetId = "",
+            bool includeBusySmartObjects = false,
+            float distanceCostPerUnit = 0f)
+        {
+            _targetMode = mode;
+            _planningTargetId = targetId ?? string.Empty;
+            _includeBusySmartObjects = includeBusySmartObjects;
+            _distanceCostPerUnit = Mathf.Max(0f, distanceCostPerUnit);
+        }
+
+        public bool TryGetPlanningTarget(out GoapActionTargetDescriptor descriptor)
+        {
+            if (_targetMode == GoapActionTargetMode.SmartObjectCategory ||
+                _targetMode == GoapActionTargetMode.NamedTarget)
+            {
+                descriptor = new GoapActionTargetDescriptor(
+                    _targetMode,
+                    _planningTargetId,
+                    _includeBusySmartObjects);
+                return !string.IsNullOrWhiteSpace(_planningTargetId);
+            }
+
+            if (_targetMode == GoapActionTargetMode.None)
+            {
+                descriptor = default;
+                return false;
+            }
+
+            if (_builtInExecution.Mode == GoapExecutionMode.SmartObjectInteraction &&
+                !string.IsNullOrWhiteSpace(_builtInExecution.TargetCategory))
+            {
+                descriptor = new GoapActionTargetDescriptor(
+                    GoapActionTargetMode.SmartObjectCategory,
+                    _builtInExecution.TargetCategory,
+                    false);
+                return true;
+            }
+
+            if (_builtInExecution.Mode == GoapExecutionMode.Sequence)
+            {
+                var findStep = _executionSteps.FirstOrDefault(step =>
+                    step != null && step.Kind == GoapActionStepKind.FindSmartObject);
+                if (findStep != null && !string.IsNullOrWhiteSpace(findStep.TargetCategory))
+                {
+                    descriptor = new GoapActionTargetDescriptor(
+                        GoapActionTargetMode.SmartObjectCategory,
+                        findStep.TargetCategory,
+                        true);
+                    return true;
+                }
+
+                var moveStep = _executionSteps.FirstOrDefault(step =>
+                    step != null && step.Kind == GoapActionStepKind.MoveToTarget &&
+                    !string.IsNullOrWhiteSpace(step.TargetId));
+                if (moveStep != null)
+                {
+                    descriptor = new GoapActionTargetDescriptor(
+                        GoapActionTargetMode.NamedTarget,
+                        moveStep.TargetId,
+                        false);
+                    return true;
+                }
+            }
+
+            descriptor = default;
+            return false;
         }
 
         public void ConfigureExecutionSteps(IEnumerable<GoapActionStep> steps)

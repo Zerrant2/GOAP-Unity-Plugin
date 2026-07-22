@@ -1,443 +1,227 @@
 # GOAP Designer для Unity 6
 
-Учебная, но близкая к production-уровню GOAP-система для Unity `6000.3.19f1`. В проект входят типизированный Blackboard, A*-планировщик, профили NPC, универсальные действия и сенсоры, резервирование ресурсов, визуальный граф, runtime-отладчик и benchmark-сцены.
+GOAP Designer - data-driven система искусственного интеллекта для Unity. NPC не выполняют заранее записанное дерево поведения: они оценивают цели, читают текущее состояние мира и через A* находят наиболее выгодную последовательность действий. При изменении ситуации агент может выбрать другую цель, прервать действие по заданной политике и построить новый план.
+
+Проект создавался как практическая работа, но доведён до состояния полноценного инструмента: в нём есть типизированный Blackboard, визуальный редактор Domain, мастер создания контента, профили агентов, библиотека сенсоров и исполнителей, Smart Objects с резервированием, runtime-отладчик, валидация, тесты, benchmark и интерактивная техно-демонстрация.
+
+Текущая версия проекта: Unity `6000.3.19f1` (Unity 6.3 LTS).
+
+## Документация
+
+| Документ | Содержание |
+| --- | --- |
+| [Демо-сцена GOAP Outpost](Documentation/DEMO_OUTPOST_RU.md) | Запуск, управление, роли NPC, сценарий показа и список демонстрируемых возможностей |
+| [Запуск и интеграция](Documentation/INTEGRATION_RU.md) | Установка в другой проект, создание Domain, Actions, Goals, Profile, NPC, Sensors и собственных расширений |
+| [Архитектура и технические решения](Documentation/ARCHITECTURE_RU.md) | Полное описание GOAP-модели, A*, runtime-цикла, редактора, Smart Objects, диагностики, производительности и применённых паттернов |
+| [Динамическая система принятия решений](My%20project/Assets/GOAP/DECISION_SYSTEM_RU.md) | Краткая памятка по score, cooldown, hysteresis, interruption, контекстным целям и runtime debugger |
 
 ## Быстрый запуск
 
-1. Откройте папку `My project` в Unity.
-2. Выберите `Tools > GOAP > Build Demo Project`.
-3. Выберите `Tools > GOAP > Open Demo Scene`.
-4. Нажмите Play.
-5. Откройте `Tools > GOAP > Runtime Debugger` и выберите NPC в Hierarchy.
-6. Откройте `Tools > GOAP > Planner Graph`, чтобы видеть активную цель и найденный план.
+1. Откройте папку `My project` через Unity Hub в Unity `6000.3.19f1`.
+2. Дождитесь завершения импорта и компиляции скриптов.
+3. Выберите `Tools > GOAP > Tech Demo > Build or Refresh Outpost`.
+4. Выберите `Tools > GOAP > Tech Demo > Open Outpost Scene`.
+5. Нажмите Play.
+6. Во время игры откройте `Tools > GOAP > Runtime Debugger` и выберите агента.
+7. Нажмите `Open Graph` в отладчике или откройте `Tools > GOAP > Planner Graph`, чтобы увидеть выбранную цель и найденный план.
 
-Для создания собственного контента откройте `Tools > GOAP > Content Wizard` или нажмите `Content Wizard` в окне графа.
+Для базовой учебной сцены используйте `Tools > GOAP > Build Demo Project`, затем `Tools > GOAP > Open Demo Scene`.
 
-В демонстрационной сцене пять заранее созданных агентов. Они находятся в Hierarchy и настраиваются через `GoapAgentAuthoring`, без создания NPC из bootstrap-кода.
+## Что входит в систему
 
-| NPC | Профиль | Поведение |
-| --- | --- | --- |
-| Worker | `Worker Profile` | Находит еду, резервирует её и ест |
-| Resident | `Resident Profile` | Находит свободную кровать и отдыхает |
-| Guard | `Guard Profile` | Берёт оружие и устраняет врага |
-| Survivor | `Survivor Profile` | Сначала закрывает голод, затем усталость |
-| Lumberjack | `Lumberjack Profile` | Резервирует дерево и добавляет Wood в Inventory |
+### GOAP-модель
 
-## Как устроен GOAP
+- `Fact` описывает одно известное агенту значение.
+- `Goal` содержит условия активации, желаемое состояние, базовый приоритет, динамические модификаторы и cooldown.
+- `Action` задаёт стоимость, предусловия, эффекты, контекстную цель и способ выполнения в сцене.
+- `Domain` объединяет Facts, Actions и Goals в одну предметную область.
+- `Agent Profile` выбирает доступные конкретному типу NPC Goals и Actions, начальные Facts, Sensors и настройки планировщика.
+- `Sensor` переносит состояние Unity-сцены в World State агента.
+- `Executor` выполняет найденное Action в игровом мире.
+- `Smart Object` представляет резервируемую кровать, еду, дерево, врага или другой объект взаимодействия.
+
+Поток принятия решения:
 
 ```text
-Sensors -> World State -> Goal Selector -> A* Planner -> Plan -> Executors
-                    ^                                      |
-                    +------------ Replanning --------------+
+Unity Scene -> Sensors -> World State -> Goal Selector -> A* Planner -> Plan
+      ^                                                          |
+      |                    Executors <----------------------------+
+      +---------------------- Replanning -------------------------+
 ```
 
-- `Fact` хранит одно известное NPC значение: `Is Hungry`, `Wood Count`, `Enemy Distance` или `Mood`.
-- `Goal` задаёт условия активации, желаемое состояние и приоритет.
-- `Action` содержит стоимость, предусловия, эффекты и способ выполнения в сцене.
-- `Sensor` переносит фактическое состояние сцены в World State агента.
-- `Agent Profile` определяет Domain, разрешённые Actions и Goals, начальные Facts, Sensors и настройки поиска.
-- `Smart Object` представляет еду, кровать, дерево, врага или другой объект взаимодействия.
+Последовательность Actions не сохраняется заранее. Планировщик строит её из текущего World State и пересчитывает после существенного изменения мира, завершения или сбоя действия, принудительного запроса и смены цели.
 
-Последовательность Actions заранее не задаётся. Планировщик строит её из текущих Facts и перестраивает при изменении мира.
+### Типизированный Blackboard
 
-## Типы Facts
-
-| Тип | Условия | Эффекты |
+| Тип Fact | Условия | Эффекты |
 | --- | --- | --- |
-| Boolean | `==`, `!=` | Set |
-| Integer | `==`, `!=`, `<`, `<=`, `>`, `>=` | Set, Add, Subtract |
-| Float | `==`, `!=`, `<`, `<=`, `>`, `>=` | Set, Add, Subtract |
-| Enum | `==`, `!=` | Set |
+| `Boolean` | `==`, `!=` | `Set` |
+| `Integer` | `==`, `!=`, `<`, `<=`, `>`, `>=` | `Set`, `Add`, `Subtract` |
+| `Float` | `==`, `!=`, `<`, `<=`, `>`, `>=` | `Set`, `Add`, `Subtract` |
+| `Enum` | `==`, `!=` | `Set` |
 
-Пример накопления ресурсов:
+Пример накопительной цели:
 
 ```text
+Action: Gather Wood
 Precondition: Wood Count < 3
 Effect:       Wood Count += 1
-Goal:         Wood Count >= 3
+
+Goal: Collect Wood
+Desired: Wood Count >= 3
 ```
 
-World State внутри runtime компилируется в индексы, Boolean Facts упаковываются в bitset, а числовые и Enum-значения входят в компактный ключ состояния для A*.
+### Выбор целей
 
-## Визуальный граф
-
-Откройте `Tools > GOAP > Planner Graph`.
-
-### Создание Domain
-
-1. Нажмите `New Domain`.
-2. Выберите путь для `.asset`.
-3. В панели Library нажмите `+` рядом с Facts, Actions или Goals.
-4. Выберите ноду и настройте её в Inspector справа.
-5. Нажмите `Validate`, исправьте ошибки и нажмите `Save`.
-
-Правый клик по пустой области открывает создание нод и инструменты раскладки.
-
-### Соединение нод
-
-У Fact-ноды два порта:
-
-- `Conditions` справа отдаёт значение Fact в предусловие Action или условие Goal.
-- `Effects` слева принимает изменение от Action.
-
-Чтобы добавить предусловие:
-
-1. Зажмите левую кнопку на порте `Conditions` Fact-ноды.
-2. Протяните линию к `Preconditions` нужного Action.
-3. Отпустите кнопку.
-4. Выберите Action и уточните оператор и значение в Inspector.
-
-Чтобы добавить эффект:
-
-1. Протяните линию от `Effects` Action к `Effects` нужного Fact.
-2. В Inspector Action задайте Set, Add или Subtract.
-
-Для Goal протяните Fact в `Activation` или `Desired State`. Удаление выделенной линии удаляет соответствующее условие из данных. Все операции поддерживают Undo/Redo.
-
-### Навигация и организация
-
-- Колесо мыши меняет масштаб.
-- Средняя кнопка перемещает камеру.
-- Рамка выделяет несколько нод.
-- `Ctrl+C` и `Ctrl+V` копируют и дублируют выбранные определения.
-- `Sort Graph` раскладывает весь Domain по причинным слоям и уменьшает пересечения связей.
-- `Layout > Sort Selection` в контекстном меню раскладывает только выделенные ноды.
-- При сортировке исходные Facts остаются слева, затем идут использующие их Actions, изменённые Facts и Goals.
-- Сортировку можно отменить через обычный `Ctrl+Z`.
-- `Focus` приглушает всё, что не относится к выбранной причинной ветке; щелчок по пустому месту сбрасывает фокус.
-- `Details` показывает или скрывает условия и эффекты внутри нод. По умолчанию граф открывается в компактном режиме.
-- `Connections` отдельно скрывает Preconditions, Effects и Goal Links.
-- Цвета связей: жёлтый — предусловие, зелёный — эффект, фиолетовый — активация Goal, голубой — желаемое состояние Goal.
-- Правый клик открывает Align Left, Align Top и распределение по горизонтали или вертикали.
-- `Annotations > Group Selection` создаёт сохраняемую группу.
-- `Annotations > Note` создаёт сохраняемую заметку.
-- Поиск затемняет неподходящие ноды и фильтрует Library.
-- Последние Domain отображаются вкладками под основной панелью.
-- Minimap помогает перемещаться по большому графу.
-
-Ошибки и предупреждения показываются цветом и меткой непосредственно на ноде. В панели Validation доступны исправления `Create Executor`, `Add Producer` и `Open Sensor`.
-
-В Play Mode оранжевым выделяется выполняемое действие, жёлтым весь план, зелёным активная цель, бирюзовым изменённые Facts.
-
-## Быстрое создание контента
-
-Откройте `Tools > GOAP > Content Wizard` (`Ctrl+Shift+N`). В мастере семь вкладок.
-
-### Agent
-
-1. Перетащите готовый GameObject NPC в `Existing Object` или оставьте поле пустым, чтобы создать нового агента.
-2. Перетащите готовый `Agent Profile`. Если профиля ещё нет, назначьте `Domain` и введите имя: мастер создаст Profile рядом с Domain.
-3. При необходимости включите `Inventory` и `Stats`.
-4. Нажмите `Setup Selected Object` или `Create Agent`.
-
-Мастер сам добавляет `GoapAgentAuthoring`, `GoapAgent`, универсальный исполнитель и профильный сенсор. У нового агента можно включить `Visible Placeholder`, чтобы сразу получить видимую Capsule в сцене.
-
-### Profile
-
-`Profile Composer` собирает компактный профиль под выбранные цели, поэтому не нужно вручную переносить в него все Actions, Sensors и начальные Facts из Domain.
-
-1. Откройте вкладку `Profile` или нажмите `Compose Profile` в окне графа.
-2. Назначьте `Domain` и введите имя нового профиля.
-3. Отметьте Goals, которыми должен обладать NPC. Кнопки `Select All` и `Clear` управляют всем списком.
-4. Проверьте блок `Generated Profile`: мастер идёт от Desired State назад, выбирает производящие Actions и добавляет их Preconditions.
-5. При необходимости включите `Include Alternatives`, чтобы взять все подходящие Actions, а не только действие с наименьшей стоимостью.
-6. Включите `Scene Agent`, если вместе с Profile нужно сразу создать NPC, затем нажмите `Create Composed Profile`.
-
-Activation Conditions выбранных Goals становятся начальными Facts. Для внешних условий доступности мастер предлагает Smart Object Sensors, а для числового эффекта вместе с шагом Inventory Add/Remove предлагает Inventory Sensor и компонент `GoapInventory`.
-
-Красная ошибка `No grounded Action chain can achieve` означает, что требуемое состояние нельзя получить от текущих начальных Facts и внешних условий. Причиной может быть отсутствующий Action или замкнутый цикл зависимостей: создание блокируется. Предупреждение об unresolved Fact означает, что значение должно приходить из пользовательского Sensor или задаваться как Initial Fact; продолжить можно только после явного включения `Allow Unresolved Facts`.
-
-### Sensors
-
-Вкладка `Sensors` настраивает входные данные существующего Agent Profile без ручного редактирования массивов в Inspector.
-
-1. Выберите `Agent Profile`.
-2. В `Input Coverage` проверьте каждое предусловие Action и условие активации Goal.
-3. Для строки `Missing` нажмите `Configure`: нужный Fact и подходящий тип источника подставятся автоматически.
-4. Выберите `Sensor`, если значение должно обновляться из мира, или `Initial Fact`, если это стартовое состояние агента.
-5. Заполните параметры источника и нажмите `Add` либо `Replace`.
-
-Coverage различает источники `Action`, `Sensor`, `InitialFact`, `DefaultValue` и `Missing`. Переключатель `Show covered inputs` показывает полную таблицу. Текущие Sensors и Initial Facts можно загрузить через `Edit` или удалить через `Remove`.
-
-Доступны Smart Object, Inventory, Distance, Proximity, Stat, Time, Component Property и Constant. Для режимов обновления `Manual` и `Event` вызывайте `RequestSensor` или `RequestAllSensors` у `GoapProfileSensorBehaviour`. Кнопка `Apply Required Components to Scene Agents` добавляет `GoapInventory` и `GoapStatSource` всем загруженным NPC с выбранным профилем. Named Target задаётся отдельно на каждом `GoapAgentAuthoring`.
-
-Sensor Builder также открывается кнопкой в Inspector профиля и кнопкой исправления `Open Sensor` в валидации графа. Если Profile Composer создаёт профиль с разрешённым unresolved Fact, мастер автоматически переводит пользователя на эту вкладку.
-
-### Action
-
-1. Назначьте `Domain`, введите имя, стоимость и при необходимости измените автоматически созданный `Executor ID`.
-2. В `Preconditions` добавьте Facts, которые должны быть выполнены до запуска действия.
-3. В `Effects` добавьте хотя бы одно изменение World State.
-4. Выберите `Execution Recipe` и заполните только относящиеся к нему настройки.
-5. Проверьте строку `Generated Steps` и нажмите `Create Action`.
-
-Доступные рецепты: `Wait`, `Move To Named Target`, `Smart Object Interaction`, `Gather Resource`, `Consume Inventory`, `Trigger Animation` и `Invoke Event`. Мастер автоматически строит последовательность универсальных Steps. Например, `Gather Resource` создаёт Find, Reserve, Move, Interact, Wait, Consume Target, Inventory Add и Release.
-
-Из графа Action Builder открывается через правый клик по пустому месту и `Create > Action with Wizard`.
-
-Строки условий учитывают тип Fact: Boolean редактируется переключателем, Integer и Float получают числовые сравнения и операции Set/Add/Subtract, Enum показывает список вариантов. Блок `Create and Connect New Fact` создаёт Fact внутри текущего Domain и сразу подключает его в выбранный список.
-
-### Goal
-
-1. Назначьте `Domain`, задайте название и Priority.
-2. Добавьте необязательные `Activation Conditions`.
-3. Добавьте обязательный `Desired State`.
-4. Проверьте `Reachability Preview`.
-5. Нажмите `Create Goal`.
-
-`Reachability Preview` показывает Actions, эффекты которых могут произвести каждое желаемое условие. `Missing producer` означает, что для этой части Goal нужно создать или исправить Action.
-
-Из графа Goal Builder открывается через правый клик по пустому месту и `Create > Goal with Wizard`.
-
-### Behaviour Preset
-
-1. Назначьте `Domain`.
-2. Выберите `Basic Needs` или `Resource Gathering`.
-3. Оставьте включёнными `Agent Profile`, `Scene Agent` и создание объектов мира, если нужен полностью готовый пример.
-4. Нажмите `Add Preset`.
-
-`Basic Needs` создаёт связанные Facts, Actions и Goals для голода и усталости, Profile с начальными `Is Hungry = True` и `Is Tired = True`, агента, еду и кровать. После запуска NPC сначала найдёт еду, поест, затем займёт кровать и отдохнёт.
-
-`Resource Gathering` создаёт Facts доступности и количества ресурса, Action с резервированием, перемещением и добавлением предмета в Inventory, Goal, Sensors, профиль и агента с `GoapInventory`. При включённом `Resource Object` мастер создаёт столько расходуемых объектов, сколько указано в `Target Amount`, поэтому Goal сразу достижим. Поля `Smart Object Category` и `Inventory Item ID` заполняются один раз и согласованно используются во всех созданных настройках.
-
-Повторное применение того же пресета не дублирует определения: существующие Facts, Actions и Goals переиспользуются. После создания нажмите `Sort Graph`, чтобы разложить новую ветку.
-
-### Smart Object
-
-1. Перетащите существующий объект сцены в `Existing Object` или оставьте поле пустым для создания примитива.
-2. Задайте `Category`, `Capacity` и `Consume On Use`.
-3. Нажмите `Setup Selected Object` или `Create Smart Object`.
-
-`Category` должна точно совпадать со значением в шагах `Find Smart Object` и профильном `Smart Object Sensor`.
-
-## Создание NPC через Profile
-
-1. Создайте GameObject или prefab NPC.
-2. Добавьте только `GoapAgentAuthoring`.
-3. Нажмите `Create Agent Profile` или выберите `Create > GOAP > Agent Profile`.
-4. Назначьте Domain.
-5. Заполните Actions и Goals. Пустой список означает «использовать весь Domain».
-6. Добавьте Initial Facts, например `Is Hungry = True`.
-7. Добавьте Sensors в самом Profile.
-8. Перетащите Profile в `GoapAgentAuthoring` и нажмите `Apply Profile`.
-
-`GoapAgentAuthoring` автоматически добавляет `GoapAgent`, `GoapBuiltInActionBehaviour` и `GoapProfileSensorBehaviour`. На конкретном NPC можно задать Initial Fact Overrides и Named Targets. Named Target связывает строковый ID из Profile с Transform сцены.
-
-Кнопка `Add Inventory and Stats` добавляет источники данных `GoapInventory` и `GoapStatSource`.
-
-## Универсальные действия
-
-В Action выберите `Execution = Sequence`. Шаги выполняются сверху вниз:
-
-- `Find Smart Object` находит объект категории.
-- `Reserve Target` занимает объект или встаёт в FIFO-очередь.
-- `Move To Target` идёт к найденному Smart Object или Named Target.
-- `Interact` вызывает событие Smart Object.
-- `Wait` ждёт заданное время.
-- `Consume Target` использует и при необходимости скрывает объект.
-- `Release Target` освобождает резервацию.
-- `Inventory Add` и `Inventory Remove` меняют ресурсы.
-- `Set Fact`, `Add Fact`, `Subtract Fact` меняют World State без двойного применения эффекта.
-- `Trigger Animation` вызывает Animator Trigger.
-- `Invoke Event` вызывает событие с ID из `GoapActionEventReceiver`.
-
-Предусловия и эффекты Action остаются контрактом планировщика. Steps описывают физическое выполнение этого контракта в сцене.
-
-### Пример Gather Wood
+Итоговая оценка цели складывается из:
 
 ```text
-Preconditions:
-  Wood Available = True
-  Wood Count < 1
-
-Effects:
-  Wood Available = False
-  Wood Count += 1
-
-Steps:
-  Find Smart Object (Wood)
-  Reserve Target
-  Move To Target
-  Wait
-  Consume Target
-  Inventory Add (Wood, 1)
-  Release Target
+Final Score = Base Priority
+            + Fact Score Modifiers
+            + GoapGoalScorerBehaviour components
 ```
 
-Для нестандартной механики можно наследовать `GoapActionBehaviour` и использовать Custom Executor ID.
+Модификаторы позволяют плавно повышать срочность голода, усталости, опасности или нехватки ресурсов. `Goal Switch Threshold` защищает от постоянного переключения между почти равными целями, а `Cooldown` временно исключает недавно завершённую цель.
 
-## Профильные сенсоры
+Для действий поддерживаются политики прерывания:
 
-В `Agent Profile > Sensors` доступны:
+- `Immediate` - остановить текущее действие сразу;
+- `FinishCurrentAction` - закончить действие и затем сменить цель;
+- `FinishCurrentPlan` - закончить весь текущий план.
 
-- `Smart Object`: наличие или количество доступных объектов категории.
-- `Inventory`: количество предметов с Item ID.
-- `Distance`: расстояние до Named Target.
-- `Proximity`: количество Collider в радиусе с фильтром Layer и Tag.
-- `Stat`: значение из `GoapStatSource`, например Health или Stamina.
-- `Time`: игровое время со Scale и Offset.
-- `Component Property`: поле или property любого Component через имя типа.
-- `Constant`: ручное или событийное значение.
+### Универсальное выполнение Actions
 
-Режимы обновления:
+Большинство поведения настраивается без нового C#-класса. Встроенный исполнитель поддерживает режимы `Wait`, `SmartObjectInteraction` и `Sequence`, а последовательность может содержать шаги:
 
-- `Every Decision`: перед каждым циклом решения.
-- `Interval`: не чаще заданного интервала.
-- `Manual`: после `RequestSensor()` или `RequestAllSensors()`.
-- `Event`: обновление инициирует UnityEvent или игровой код.
+`FindSmartObject`, `ReserveTarget`, `MoveToTarget`, `Interact`, `Wait`, `ConsumeTarget`, `ReleaseTarget`, `InventoryAdd`, `InventoryRemove`, `SetFact`, `AddFact`, `SubtractFact`, `TriggerAnimation`, `InvokeEvent`.
 
-Старые компонентные сенсоры `GoapSmartObjectSensor`, `GoapInventorySensor`, `GoapDistanceSensor`, `GoapTriggerSensor`, `GoapManualSensor` и `GoapBooleanEventSensor` также поддерживаются.
+Действие также может искать Smart Object по категории или Named Target, учитывать расстояние в стоимости плана и получать дополнительную стоимость от компонентов `GoapActionCostProviderBehaviour`.
 
-## Smart Objects и очередь
+### Сенсоры
 
-`GoapSmartObject` хранит Category, Capacity, доступность, timeout резервации и `On Interact`.
+Профильная библиотека содержит сенсоры `SmartObject`, `Inventory`, `Distance`, `Proximity`, `Stat`, `Time`, `ComponentProperty` и `Constant`. Отдельными компонентами доступны manual, trigger и event-сценарии. Режимы обновления: `EveryDecision`, `Interval`, `Manual`, `Event`.
 
-Если мест нет, `Reserve Target` ставит NPC в FIFO-очередь. Освобождение происходит при успешном завершении, отмене Action, отключении агента или timeout. После освобождения первый ожидающий агент автоматически становится владельцем.
+### Визуальный редактор
 
-Это предотвращает одновременное использование одной кровати, еды или дерева несколькими NPC.
+Откройте `Tools > GOAP > Planner Graph` (`Ctrl+Shift+G`). Редактор предоставляет:
 
-## Runtime Debugger
+- Fact, Action и Goal ноды с редактируемыми связями;
+- создание Fact при протягивании новой связи;
+- Undo/Redo, Copy/Paste, Duplicate и multi-selection;
+- поиск, вкладки недавних Domain, группы и заметки;
+- выравнивание, распределение и сортировку всего графа или выделения;
+- компактный и подробный режимы нод;
+- фильтрацию Preconditions, Effects и Goal Links;
+- Focus-режим для выбранной причинной ветки;
+- Minimap и команды `Frame All`/`Frame Plan`;
+- ошибки на нодах и быстрые исправления `Create Executor`, `Add Producer`, `Open Sensor`;
+- подсветку выбранной Goal, плана, текущего Action, заблокированных Actions и изменённых Facts в Play Mode.
 
-Откройте `Tools > GOAP > Runtime Debugger` в Play Mode.
+Связи являются представлением сериализованных предусловий и эффектов, поэтому визуальные данные и runtime-модель не расходятся. Зависимость от экспериментального Unity GraphView изолирована в Editor assembly; Runtime от неё не зависит.
 
-Debugger показывает:
+### Content Wizard
 
-- Profile, Domain, Status, текущие Goal и Action;
-- типизированный World State;
-- полный план, стоимость, время и число раскрытых состояний;
-- все Goals, приоритеты, состояния `SELECTED/ACTIVE/INACTIVE/DONE` и причины неактивности;
-- все Actions, отсутствующие executors и каждое предусловие с ожидаемым и фактическим значением;
-- последнюю категорию ошибки планировщика (`NoPlanFound`, `TimeLimitReached` и другие);
-- последние 50 снимков решений и последние 100 событий, перепланирований, ошибок и отмен.
+Откройте `Tools > GOAP > Content Wizard` (`Ctrl+Shift+N`). Вкладки мастера:
 
-Вкладки:
+- `Agent` - создать NPC или настроить выбранный GameObject;
+- `Profile` - собрать профиль из выбранных Goals и автоматически найденных зависимостей;
+- `Sensors` - добавить источник значения Fact или Initial Fact;
+- `Action` - создать Action по готовому рецепту;
+- `Goal` - создать цель и связанные Facts;
+- `Presets` - создать связанный набор поведения, профиль, агента и объекты мира;
+- `Smart` - создать или настроить Smart Object.
 
-- `Overview`: краткое состояние агента, текущий план, метрики и главные блокировки Actions.
-- `Facts`: полный World State с поиском по имени Fact.
-- `Goals`: оценка каждой Goal. Раскройте строку, чтобы увидеть Activation Conditions и Desired State.
-- `Actions`: оценка каждой Action. `READY` можно запустить сейчас, `WAITING` ожидает предусловия, `NO EXECUTOR` не имеет подходящего компонента. Включите `Blocked Only`, чтобы скрыть готовые Actions.
-- `History`: автоматические снимки на событиях выбора Goal, построения плана, запуска и завершения Action. Нажмите на снимок, чтобы все остальные вкладки показали состояние того момента; живой NPC при этом продолжит работать.
+### Runtime Debugger
 
-Кнопки:
+Откройте `Tools > GOAP > Runtime Debugger` (`Ctrl+Shift+D`) в Play Mode. Доступны вкладки `Overview`, `Facts`, `Goals`, `Actions`, `History`, а также:
 
-- `Pause/Resume`: остановить или продолжить decision loop.
-- `Step Action`: запустить следующий шаг решения до границы Action.
-- `Force Replan`: обновить сенсоры и перестроить план.
-- `Abort`: отменить текущий Action с освобождением ресурсов.
-- `Capture`: вручную добавить снимок текущего решения в History.
-- `Restore & Replan`: заменить World State агента состоянием выбранного снимка и заново запустить принятие решения.
-- `Copy`: скопировать текстовый снимок для отчёта об ошибке.
+- итоговый score каждой цели и вклад каждого модификатора;
+- текущий план, его стоимость, время поиска и число раскрытых состояний;
+- причины неактивности Goals и блокировки Actions;
+- `Pause`, `Step Action`, `Force Replan` и `Abort`;
+- автоматические и ручные снимки решений;
+- просмотр истории и копирование диагностического отчёта;
+- восстановление World State снимка с повторным планированием;
+- открытие и подсветка этого же состояния в Planner Graph.
 
-`Restore & Replan` восстанавливает только GOAP World State. Позиции объектов, содержимое `GoapInventory`, резервации и состояние `GoapSmartObject` не перематываются; для полного воспроизведения игровой сцены нужен отдельный save/replay-слой проекта.
+Снимок восстанавливает GOAP World State, но не откатывает Transform, Inventory, резервирования и состояние объектов Unity. Полное воспроизведение сцены требует отдельной игровой save/replay-системы.
 
-### Живой план в Planner Graph
+### Валидация
 
-1. Запустите сцену и откройте `Tools > GOAP > Runtime Debugger`.
-2. Выберите NPC в поле Agent или включите `Follow Selection` и нажмите на него в Hierarchy.
-3. Нажмите `Open Graph`. Planner Graph автоматически откроет Domain этого NPC.
-4. Нажмите `Frame Plan`, чтобы поместить в видимую область выбранную Goal, планируемые Actions и участвующие Facts.
-5. Выберите запись во вкладке `History`: Graph переключится с Live на этот Snapshot. `Return to Live` вернёт текущие значения.
+Валидатор проверяет отсутствующие ссылки, повторяющиеся ID, некорректные Enum, несовместимые операторы, конфликтующие условия и эффекты, неправильные шаги Sequence, отсутствующие executors, Facts без источника, Actions без эффекта, недостижимые Goals и циклические цепочки без исходного состояния.
 
-Обозначения в графе:
+### Производительность
 
-- `GOAL` и синяя рамка: выбранная Goal;
-- `RUNNING` и зелёная рамка: выполняемая Action;
-- `PLAN 1,2...` и жёлтая рамка: порядок оставшихся Actions; повторяющаяся Action показывает несколько номеров;
-- `BLOCKED` или `NO EXECUTOR` и красная рамка: Action нельзя запустить сейчас; наведите курсор для просмотра причины;
-- бирюзовая рамка и значение в заголовке Fact: runtime-значение отличается от значения по умолчанию;
-- толстые цветные связи: Facts, Actions и Goal, участвующие в текущем плане.
+- Domain компилируется в индексированное представление, переиспользуемое агентами.
+- Boolean Facts упаковываются в bitset; числовые и Enum значения входят в компактный ключ состояния A*.
+- `GoapPlannerSettings` ограничивает число состояний, глубину и время одного поиска.
+- Поиск поддерживает `CancellationToken`.
+- `GoapPlanningScheduler` распределяет массовое перепланирование между кадрами. По умолчанию: не более 16 поисков и 4 мс планирования за кадр.
+- Profiler Markers покрывают планирование, компиляцию состояния, поиск, sensors, decision loop, scheduler и benchmark spawn.
 
-В самом Planner Graph кнопка `Use Selected NPC` берёт Agent из текущего выбора Hierarchy. Переключатель `Follow Agent` разрешает графу автоматически менять Domain вслед за Runtime Debugger; отключите его, если хотите оставить открытым другой Domain.
+`Tools > GOAP > Build Benchmark Scenes` создаёт сцены на 10, 100 и 500 NPC. `Tools > GOAP > Benchmark Dashboard` позволяет переключать `Visual` и `LogicOnly`, задавать бюджет и смотреть среднее время, median, p95, max, FPS, раскрытые состояния и очередь планирования.
 
-### Диагностика Executor
+## Техно-демо GOAP Outpost
 
-Перед запуском Action компонент Executor выполняет проверку без изменения игровой сцены. Для встроенного Executor проверяются:
+Автоматическая мини-стратегия показывает четырёх специалистов:
 
-- наличие и доступность Smart Object, вместимость резервации и позиция в очереди;
-- наличие `GoapInventory` и суммарное количество предметов для всех шагов `Inventory Remove`;
-- named target из `GoapAgentAuthoring`;
-- наличие, состояние и полный путь `NavMeshAgent`;
-- наличие `Animator` и Trigger-параметра;
-- наличие `GoapActionEventReceiver` и события с нужным ID;
-- корректность порядка и параметров каждого шага Sequence.
+| Роль | Основное поведение |
+| --- | --- |
+| Lumberjack | Резервирует дерево, добывает древесину и относит её на склад |
+| Forager | Собирает ягоды и пополняет запас еды |
+| Guard | Берёт оружие, атакует монстров и патрулирует периметр |
+| Builder | Расходует древесину на ремонт лагеря |
 
-Результат имеет состояние `Ready`, `Warning` или `Blocked`, код (`InventoryInsufficient`, `SmartObjectReserved`, `NavMeshPathInvalid` и другие) и сообщение. `Warning` не запрещает запуск: например, при отсутствии `NavMeshAgent` встроенный Executor сообщает о переходе на прямое движение. Проверка резервирования не занимает Smart Object и не добавляет NPC в очередь.
+Все жители реагируют на голод, усталость и угрозу. В HUD можно нанимать NPC, менять их роли, регулировать скорость симуляции и вызывать волну монстров. Подробный сценарий презентации находится в [документе демо-сцены](Documentation/DEMO_OUTPOST_RU.md).
 
-Пользовательский Executor может предоставить такую же диагностику:
+## Меню и сочетания клавиш
 
-```csharp
-public override GoapExecutorDiagnostic EvaluateStart(GoapActionContext context)
-{
-    if (!TryGetComponent<MyRequiredComponent>(out _))
-    {
-        return GoapExecutorDiagnostic.Blocked(
-            GoapExecutorIssueCode.RequiredComponentMissing,
-            "MyRequiredComponent is missing");
-    }
+| Команда | Назначение |
+| --- | --- |
+| `Tools > GOAP > Content Wizard` | Создание связанного контента, `Ctrl+Shift+N` |
+| `Tools > GOAP > Planner Graph` | Визуальный Domain, `Ctrl+Shift+G` |
+| `Tools > GOAP > Runtime Debugger` | Отладка NPC, `Ctrl+Shift+D` |
+| `Tools > GOAP > Build Demo Project` | Пересоздание базового демо и benchmark |
+| `Tools > GOAP > Open Demo Scene` | Открытие базовой сцены |
+| `Tools > GOAP > Tech Demo > Build or Refresh Outpost` | Пересоздание техно-демо |
+| `Tools > GOAP > Tech Demo > Open Outpost Scene` | Открытие Outpost, `Ctrl+Alt+Shift+G` |
+| `Tools > GOAP > Benchmark Dashboard` | Нагрузочные сцены и метрики |
+| `Tools > GOAP > Run Automated Tests` | Edit Mode и Play Mode тесты, `Ctrl+Shift+T` |
 
-    return GoapExecutorDiagnostic.Ready();
-}
+## Структура репозитория
+
+```text
+Practica_unity/
+  README.md
+  Documentation/
+  My project/
+    Assets/GOAP/
+      Runtime/Core       Domain, Facts, Conditions, World State, validation
+      Runtime/Planning   A* planner, goal selector, plans and metrics
+      Runtime/Agent      Agent, profiles, sensors, executors and Smart Objects
+      Runtime/Demo       Basic demo and benchmark runtime
+      Runtime/TechDemo   GOAP Outpost runtime
+      Editor             Graph, inspectors, debugger, wizard and builders
+      Demo               Generated basic demo and benchmark assets
+      TechDemo           Generated Outpost assets and scene
+      Tests              Edit Mode and Play Mode tests
 ```
 
-После фактического сбоя Executor сохраняет `LastFailureReason`. Agent добавляет эту причину в Status, Snapshot и Decision History.
+Папки `Library`, `Temp`, `Logs`, `.vs` и пользовательские файлы IDE не являются частью исходников и исключаются через `.gitignore`.
 
-## Валидация
-
-Редактор проверяет:
-
-- отсутствующие ссылки и дублирующиеся ID;
-- Enum без значений или с дубликатами;
-- Action без эффектов, executor или Steps;
-- неправильный порядок и неполные настройки Steps;
-- недопустимые операции для Boolean и Enum;
-- противоречащие условия и эффекты;
-- Facts вне Domain;
-- недостижимые Goals и предусловия без производителя;
-- неиспользуемые Facts.
-
-## Производительность
-
-`GoapPlannerSettings` ограничивает:
-
-- `Max Expanded States`;
-- `Max Plan Depth`;
-- `Max Planning Milliseconds`.
-
-Поиск можно отменить через `CancellationToken`. В Unity Profiler доступны маркеры:
-
-- `GOAP.Plan`;
-- `GOAP.Plan.CompileState`;
-- `GOAP.Plan.Search`;
-- `GOAP.Agent.Decision`;
-- `GOAP.Agent.Sensors`;
-- `GOAP.Scheduler.BudgetCheck`;
-- `GOAP.Benchmark.SpawnAgents`.
-
-Команда `Tools > GOAP > Build Benchmark Scenes` создаёт сцены на 10, 100 и 500 NPC в `Assets/GOAP/Demo/Benchmarks`.
-
-Окно `Tools > GOAP > Benchmark Dashboard` открывает эти сцены и показывает live-метрики: среднее время поиска, медиану, p95, максимум, количество раскрытых состояний, FPS, пиковую стоимость планирования за кадр и число отложенных запросов. Кнопка `Copy Summary` копирует готовую сводку замера.
-
-В `GoapBenchmarkRunner` и Dashboard доступны два режима. `LogicOnly` отключает визуальные Renderer-компоненты и подходит для чистого замера GOAP. `Visual` показывает агентов сеткой: ожидающие, выполняющие действие и завершившие цель NPC получают разные цвета. После смены режима в Dashboard нажмите `Apply Settings`.
-
-`GoapPlanningScheduler` ограничивает глобальную нагрузку от одновременного перепланирования. По умолчанию за кадр разрешено не более 16 поисков и 4 мс суммарного времени поиска; остальные агенты остаются в очереди до следующего decision tick. В benchmark-сценах бюджет можно менять в компоненте `GoapBenchmarkRunner` или прямо в Dashboard. Ограничение отключаемое и не меняет найденный A*-план, только распределяет запуски поиска по кадрам.
-
-Во время поиска Planner использует внутреннее индексированное состояние: Boolean Facts упакованы в `ulong`-битсеты, а Int, Float и Enum хранятся в компактном массиве. Это состояние одновременно служит неизменяемым ключом A*, поэтому для каждого узла не создаётся отдельный массив ключа. `GoapCompiledDomain` переиспользует layout и скомпилированные Preconditions/Effects/Goal State между всеми NPC одного Domain. Публичный `GoapWorldState` остаётся типизированным и совместимым с Sensors, Executors и пользовательским кодом.
-
-## Тесты
+## Тестирование
 
 Запуск: `Tools > GOAP > Run Automated Tests` или `Ctrl+Shift+T`.
 
-Edit Mode проверяет A*, стоимость, числовые и Enum Facts, отмену поиска, очередь, валидацию и граф. Play Mode проверяет полный цикл агента, универсальный исполнитель и демонстрацию из пяти профильных NPC.
+Тесты разделены на Edit Mode и Play Mode. Они покрывают A*, выбор стоимости, типизированные Facts, числовые эффекты, отмену и лимиты поиска, динамический score, hysteresis, cooldown, policies прерывания, планирующий контекст, scheduler, резервирование, валидацию, graph layout, полный runtime-цикл агента и сценарии техно-демо.
 
-## Структура
+Последняя локальная проверка: 46 Edit Mode и 8 Play Mode тестов успешно пройдены.
 
-```text
-Assets/GOAP/
-  Runtime/Core       Facts, Conditions, Domain, World State, validation
-  Runtime/Planning   A* planner, plans, cancellation, limits and metrics
-  Runtime/Agent      Agent, Profiles, Executors, Sensors, Inventory, Smart Objects
-  Runtime/Demo       Authored demo controller, labels, HUD and benchmark runner
-  Editor             Planner Graph, inspectors, debugger and project builder
-  Demo               Generated domain, profiles, scenes and materials
-  Tests              Edit Mode and Play Mode tests
-```
+## Ограничения
+
+- Визуальный слой использует экспериментальный `UnityEditor.Experimental.GraphView`, поэтому он изолирован от Runtime и при изменении Unity может потребовать замены только Editor-представления.
+- Эффекты Action описывают ожидаемое логическое состояние. Executor обязан действительно выполнить операцию в сцене и корректно сообщить успех или сбой.
+- Система не заменяет NavMesh, анимацию, боевую систему, сохранения или сетевую синхронизацию. Она координирует принятие решений и подключается к этим подсистемам через executors, sensors и events.
+- Сгенерированные демо-ассеты предназначены для демонстрации. Для игрового проекта рекомендуется создать собственные Domain и Profile, а demo/runtime держать отдельно от производственного контента.
+
+Полный путь интеграции, включая первый собственный NPC и пользовательские C#-расширения, описан в [инструкции по запуску и интеграции](Documentation/INTEGRATION_RU.md).

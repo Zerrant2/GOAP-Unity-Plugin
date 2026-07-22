@@ -13,6 +13,7 @@ namespace Practice.GOAP
         [SerializeField] private List<GoapFactValueReference> _initialFacts = new();
         [SerializeField] private List<GoapProfileSensorDefinition> _sensors = new();
         [SerializeField, Min(0.05f)] private float _decisionInterval = 0.2f;
+        [SerializeField, Min(0f)] private float _goalSwitchThreshold = 5f;
         [SerializeField] private GoapPlannerSettings _plannerSettings = new()
         {
             MaxExpandedStates = 5000,
@@ -27,6 +28,7 @@ namespace Practice.GOAP
         public IReadOnlyList<GoapFactValueReference> InitialFacts => _initialFacts;
         public IReadOnlyList<GoapProfileSensorDefinition> Sensors => _sensors;
         public float DecisionInterval => Mathf.Max(0.05f, _decisionInterval);
+        public float GoalSwitchThreshold => Mathf.Max(0f, _goalSwitchThreshold);
         public GoapPlannerSettings PlannerSettings => _plannerSettings;
         public bool LogDecisions => _logDecisions;
 
@@ -37,7 +39,8 @@ namespace Practice.GOAP
             float decisionInterval = 0.2f,
             bool logDecisions = false,
             IEnumerable<GoapFactValueReference> initialFacts = null,
-            IEnumerable<GoapProfileSensorDefinition> sensors = null)
+            IEnumerable<GoapProfileSensorDefinition> sensors = null,
+            float goalSwitchThreshold = 5f)
         {
             _domain = domain;
             _actions = actions == null ? new List<GoapActionDefinition>() : new List<GoapActionDefinition>(actions);
@@ -49,6 +52,7 @@ namespace Practice.GOAP
                 ? new List<GoapProfileSensorDefinition>()
                 : new List<GoapProfileSensorDefinition>(sensors);
             _decisionInterval = Mathf.Max(0.05f, decisionInterval);
+            _goalSwitchThreshold = Mathf.Max(0f, goalSwitchThreshold);
             _plannerSettings = GoapPlannerSettings.Default;
             _logDecisions = logDecisions;
         }

@@ -70,10 +70,11 @@ namespace Practice.GOAP
                     return false;
                 }
 
-                _target = GoapSmartObject.FindClosest(
-                    _settings.TargetCategory,
-                    transform.position,
-                    context.Agent);
+                _target = ResolveContextSmartObject(context, _settings.TargetCategory, false) ??
+                          GoapSmartObject.FindClosest(
+                              _settings.TargetCategory,
+                              transform.position,
+                              context.Agent);
                 if (_target == null || (_settings.ReserveTarget && !_target.TryReserve(context.Agent)))
                 {
                     _target = null;
@@ -183,10 +184,11 @@ namespace Practice.GOAP
                     "SmartObject target category is empty");
             }
 
-            var target = GoapSmartObject.FindClosest(
-                settings.TargetCategory,
-                transform.position,
-                context.Agent);
+            var target = ResolveContextSmartObject(context, settings.TargetCategory, false) ??
+                         GoapSmartObject.FindClosest(
+                             settings.TargetCategory,
+                             transform.position,
+                             context.Agent);
             if (target == null)
             {
                 var busyTarget = GoapSmartObject.FindClosest(
@@ -272,12 +274,13 @@ namespace Practice.GOAP
                                 "SmartObject category is empty");
                         }
 
-                        target = GoapSmartObject.FindClosest(
-                            step.TargetCategory,
-                            transform.position,
-                            context.Agent,
-                            float.PositiveInfinity,
-                            true);
+                        target = ResolveContextSmartObject(context, step.TargetCategory, true) ??
+                                 GoapSmartObject.FindClosest(
+                                     step.TargetCategory,
+                                     transform.position,
+                                     context.Agent,
+                                     float.PositiveInfinity,
+                                     true);
                         reservationPlanned = false;
                         if (target == null)
                         {
@@ -316,7 +319,9 @@ namespace Practice.GOAP
                     case GoapActionStepKind.MoveToTarget:
                         var destination = string.IsNullOrWhiteSpace(step.TargetId)
                             ? target != null ? target.transform : null
-                            : ResolveNamedTarget(context.Agent, step.TargetId);
+                            : context.NamedTarget != null
+                                ? context.NamedTarget
+                                : ResolveNamedTarget(context.Agent, step.TargetId);
                         if (destination == null)
                         {
                             var targetDescription = string.IsNullOrWhiteSpace(step.TargetId)
@@ -636,12 +641,13 @@ namespace Practice.GOAP
                 case GoapActionStepKind.FindSmartObject:
                     ReleaseTarget();
                     _targetOwner = context.Agent;
-                    _target = GoapSmartObject.FindClosest(
-                        step.TargetCategory,
-                        transform.position,
-                        context.Agent,
-                        float.PositiveInfinity,
-                        true);
+                    _target = ResolveContextSmartObject(context, step.TargetCategory, true) ??
+                              GoapSmartObject.FindClosest(
+                                  step.TargetCategory,
+                                  transform.position,
+                                  context.Agent,
+                                  float.PositiveInfinity,
+                                  true);
                     if (_target == null)
                     {
                         Fail($"No available SmartObject with category '{step.TargetCategory}' was found");
@@ -676,7 +682,9 @@ namespace Practice.GOAP
                     break;
 
                 case GoapActionStepKind.MoveToTarget:
-                    _namedTarget = ResolveNamedTarget(context.Agent, step.TargetId);
+                    _namedTarget = context.NamedTarget != null
+                        ? context.NamedTarget
+                        : ResolveNamedTarget(context.Agent, step.TargetId);
                     var destination = _target != null ? _target.transform : _namedTarget;
                     if (destination == null)
                     {
@@ -918,6 +926,22 @@ namespace Practice.GOAP
             return agent.TryGetComponent<GoapAgentAuthoring>(out var authoring)
                 ? authoring.ResolveTarget(targetId)
                 : null;
+        }
+
+        private static GoapSmartObject ResolveContextSmartObject(
+            GoapActionContext context,
+            string category,
+            bool includeBusy)
+        {
+            var target = context?.SmartObjectTarget;
+            if (target == null ||
+                !string.Equals(target.Category, category, System.StringComparison.Ordinal) ||
+                (includeBusy ? !target.Available : !target.IsAvailableTo(context.Agent)))
+            {
+                return null;
+            }
+
+            return target;
         }
 
         private void StopNavigation()

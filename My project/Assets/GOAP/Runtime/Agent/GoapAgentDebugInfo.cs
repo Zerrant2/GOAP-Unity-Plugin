@@ -8,6 +8,7 @@ namespace Practice.GOAP
     {
         Initialized,
         GoalSelected,
+        GoalSwitchDeferred,
         PlanBuilt,
         PlanFailed,
         ActionStarted,
@@ -140,7 +141,10 @@ namespace Practice.GOAP
         public GoapActionDefinition Action { get; }
         public bool HasExecutor { get; }
         public bool PreconditionsSatisfied { get; }
-        public bool Executable => HasExecutor && PreconditionsSatisfied && ExecutorDiagnostic.CanStart;
+        public bool PlanningAvailable => !float.IsNaN(PlanningCost) && !float.IsInfinity(PlanningCost);
+        public bool Executable => HasExecutor && PlanningAvailable && PreconditionsSatisfied && ExecutorDiagnostic.CanStart;
+        public float BaseCost { get; }
+        public float PlanningCost { get; }
         public string Reason { get; }
         public GoapExecutorDiagnostic ExecutorDiagnostic { get; }
         public IReadOnlyList<GoapConditionDiagnostic> Preconditions =>
@@ -158,7 +162,8 @@ namespace Practice.GOAP
                     : GoapExecutorDiagnostic.Blocked(
                         GoapExecutorIssueCode.MissingExecutor,
                         "No matching executor"),
-                preconditions)
+                preconditions,
+                null)
         {
         }
 
@@ -166,16 +171,25 @@ namespace Practice.GOAP
             GoapActionDefinition action,
             bool hasExecutor,
             GoapExecutorDiagnostic executorDiagnostic,
-            IEnumerable<GoapConditionDiagnostic> preconditions)
+            IEnumerable<GoapConditionDiagnostic> preconditions,
+            float? planningCost = null)
         {
             Action = action;
             HasExecutor = hasExecutor;
+            BaseCost = action?.Cost ?? 0f;
+            PlanningCost = planningCost ?? BaseCost;
             ExecutorDiagnostic = executorDiagnostic;
             _preconditions = (preconditions ?? Array.Empty<GoapConditionDiagnostic>()).ToArray();
             PreconditionsSatisfied = _preconditions.All(item => item.Satisfied);
             if (!hasExecutor)
             {
                 Reason = "No matching executor";
+                return;
+            }
+
+            if (float.IsNaN(PlanningCost) || float.IsInfinity(PlanningCost))
+            {
+                Reason = "Planning context is unavailable";
                 return;
             }
 
@@ -195,34 +209,63 @@ namespace Practice.GOAP
     {
         private readonly IReadOnlyList<GoapConditionDiagnostic> _activationConditions;
         private readonly IReadOnlyList<GoapConditionDiagnostic> _desiredState;
+        private readonly IReadOnlyList<GoapGoalScoreTerm> _scoreTerms;
 
         public GoapGoalDefinition Goal { get; }
         public bool Active { get; }
         public bool Satisfied { get; }
+        public bool Eligible { get; }
+        public bool OnCooldown { get; }
+        public float CooldownRemaining { get; }
+        public float BaseScore { get; }
+        public float ModifierScore { get; }
+        public float FinalScore { get; }
         public string Reason { get; }
         public IReadOnlyList<GoapConditionDiagnostic> ActivationConditions =>
             _activationConditions ?? Array.Empty<GoapConditionDiagnostic>();
         public IReadOnlyList<GoapConditionDiagnostic> DesiredState =>
             _desiredState ?? Array.Empty<GoapConditionDiagnostic>();
+        public IReadOnlyList<GoapGoalScoreTerm> ScoreTerms =>
+            _scoreTerms ?? Array.Empty<GoapGoalScoreTerm>();
 
         public GoapGoalDiagnostic(
             GoapGoalDefinition goal,
             IEnumerable<GoapConditionDiagnostic> activationConditions,
             IEnumerable<GoapConditionDiagnostic> desiredState)
+            : this(goal, activationConditions, desiredState, null)
+        {
+        }
+
+        public GoapGoalDiagnostic(
+            GoapGoalDefinition goal,
+            IEnumerable<GoapConditionDiagnostic> activationConditions,
+            IEnumerable<GoapConditionDiagnostic> desiredState,
+            GoapGoalEvaluation evaluation)
         {
             Goal = goal;
             _activationConditions = (activationConditions ?? Array.Empty<GoapConditionDiagnostic>()).ToArray();
             _desiredState = (desiredState ?? Array.Empty<GoapConditionDiagnostic>()).ToArray();
             Active = _activationConditions.All(item => item.Satisfied);
             Satisfied = _desiredState.All(item => item.Satisfied);
+            BaseScore = evaluation?.BaseScore ?? goal?.Priority ?? 0f;
+            ModifierScore = evaluation?.ModifierScore ?? 0f;
+            FinalScore = evaluation?.FinalScore ?? BaseScore;
+            CooldownRemaining = evaluation?.CooldownRemaining ?? 0f;
+            OnCooldown = CooldownRemaining > 0f;
+            Eligible = evaluation?.Eligible ?? (goal != null && Active && !Satisfied);
+            _scoreTerms = evaluation?.ScoreTerms?.ToArray() ?? Array.Empty<GoapGoalScoreTerm>();
 
             if (Satisfied)
             {
                 Reason = "Satisfied";
             }
+            else if (OnCooldown)
+            {
+                Reason = $"Cooldown: {CooldownRemaining:0.0}s remaining";
+            }
             else if (Active)
             {
-                Reason = "Active";
+                Reason = $"Eligible: score {FinalScore:0.##}";
             }
             else
             {
@@ -349,7 +392,8 @@ namespace Practice.GOAP
         public static GoapActionDiagnostic EvaluateAction(
             GoapActionDefinition action,
             GoapWorldState worldState,
-            bool hasExecutor)
+            bool hasExecutor,
+            float? planningCost = null)
         {
             return EvaluateAction(
                 action,
@@ -359,24 +403,27 @@ namespace Practice.GOAP
                     ? GoapExecutorDiagnostic.Ready()
                     : GoapExecutorDiagnostic.Blocked(
                         GoapExecutorIssueCode.MissingExecutor,
-                        "No matching executor"));
+                        "No matching executor"),
+                planningCost);
         }
 
         public static GoapActionDiagnostic EvaluateAction(
             GoapActionDefinition action,
             GoapWorldState worldState,
             bool hasExecutor,
-            GoapExecutorDiagnostic executorDiagnostic)
+            GoapExecutorDiagnostic executorDiagnostic,
+            float? planningCost = null)
         {
             var conditions = action == null
                 ? Array.Empty<GoapConditionDiagnostic>()
                 : action.Preconditions.Select(condition => EvaluateCondition(condition, worldState));
-            return new GoapActionDiagnostic(action, hasExecutor, executorDiagnostic, conditions);
+            return new GoapActionDiagnostic(action, hasExecutor, executorDiagnostic, conditions, planningCost);
         }
 
         public static GoapGoalDiagnostic EvaluateGoal(
             GoapGoalDefinition goal,
-            GoapWorldState worldState)
+            GoapWorldState worldState,
+            GoapGoalEvaluation evaluation = null)
         {
             var activation = goal == null
                 ? Array.Empty<GoapConditionDiagnostic>()
@@ -384,7 +431,7 @@ namespace Practice.GOAP
             var desired = goal == null
                 ? Array.Empty<GoapConditionDiagnostic>()
                 : goal.DesiredState.Select(condition => EvaluateCondition(condition, worldState));
-            return new GoapGoalDiagnostic(goal, activation, desired);
+            return new GoapGoalDiagnostic(goal, activation, desired, evaluation);
         }
     }
 }

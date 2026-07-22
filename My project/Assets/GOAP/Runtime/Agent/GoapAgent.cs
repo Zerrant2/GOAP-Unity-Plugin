@@ -18,6 +18,7 @@ namespace Practice.GOAP
         [SerializeField] private GoapDomain _domain;
         [SerializeField] private GoapAgentProfile _profile;
         [SerializeField, Min(0.05f)] private float _decisionInterval = 0.2f;
+        [SerializeField, Min(0f)] private float _goalSwitchThreshold = 5f;
         [SerializeField] private GoapPlannerSettings _plannerSettings;
         [SerializeField] private bool _logDecisions;
 
@@ -28,8 +29,16 @@ namespace Practice.GOAP
         private readonly List<GoapActionDiagnostic> _actionDiagnostics = new();
         private readonly List<GoapGoalDiagnostic> _goalDiagnostics = new();
         private readonly List<GoapDecisionSnapshot> _decisionSnapshots = new();
+        private readonly Dictionary<GoapGoalDefinition, float> _goalCooldownUntil = new();
+        private readonly Dictionary<GoapActionDefinition, ResolvedActionTarget> _plannedTargets = new();
+        private readonly Dictionary<GoapActionDefinition, float> _planningActionCosts = new();
         private GoapActionBehaviour[] _actionBehaviours = Array.Empty<GoapActionBehaviour>();
         private GoapSensorBehaviour[] _sensors = Array.Empty<GoapSensorBehaviour>();
+        private GoapGoalScorerBehaviour[] _goalScorers = Array.Empty<GoapGoalScorerBehaviour>();
+        private GoapActionCostProviderBehaviour[] _actionCostProviders = Array.Empty<GoapActionCostProviderBehaviour>();
+        private GoapGoalSelectionResult _lastGoalSelection;
+        private GoapGoalDefinition _deferredGoal;
+        private bool _finishCurrentPlanBeforeSwitch;
         private Coroutine _actionRoutine;
         private GoapActionBehaviour _runningBehaviour;
         private GoapActionContext _runningContext;
@@ -55,6 +64,13 @@ namespace Practice.GOAP
         public IReadOnlyList<GoapActionDiagnostic> ActionDiagnostics => _actionDiagnostics;
         public IReadOnlyList<GoapGoalDiagnostic> GoalDiagnostics => _goalDiagnostics;
         public IReadOnlyList<GoapDecisionSnapshot> DecisionSnapshots => _decisionSnapshots;
+
+        public float GetActionPlanningCost(GoapActionDefinition action)
+        {
+            return action != null && _planningActionCosts.TryGetValue(action, out var cost)
+                ? cost
+                : action?.Cost ?? float.PositiveInfinity;
+        }
 
         public event Action<GoapAgent> PlanChanged;
         public event Action<GoapAgent> ActionChanged;
@@ -92,10 +108,19 @@ namespace Practice.GOAP
             RunDecisionCycle();
         }
 
-        public void Configure(GoapDomain domain, float decisionInterval = 0.2f, bool logDecisions = false)
+        public void Configure(
+            GoapDomain domain,
+            float decisionInterval = 0.2f,
+            bool logDecisions = false,
+            float goalSwitchThreshold = 5f)
         {
             _profile = null;
-            ApplyConfiguration(domain, decisionInterval, GoapPlannerSettings.Default, logDecisions);
+            ApplyConfiguration(
+                domain,
+                decisionInterval,
+                GoapPlannerSettings.Default,
+                logDecisions,
+                goalSwitchThreshold);
         }
 
         public void Configure(GoapAgentProfile profile)
@@ -103,7 +128,7 @@ namespace Practice.GOAP
             _profile = profile;
             if (profile == null)
             {
-                ApplyConfiguration(null, 0.2f, GoapPlannerSettings.Default, false);
+                ApplyConfiguration(null, 0.2f, GoapPlannerSettings.Default, false, 5f);
                 return;
             }
 
@@ -111,7 +136,8 @@ namespace Practice.GOAP
                 profile.Domain,
                 profile.DecisionInterval,
                 profile.PlannerSettings,
-                profile.LogDecisions);
+                profile.LogDecisions,
+                profile.GoalSwitchThreshold);
         }
 
         public bool SetFact(GoapFact fact, bool value)
@@ -263,13 +289,20 @@ namespace Practice.GOAP
             GoapDomain domain,
             float decisionInterval,
             GoapPlannerSettings plannerSettings,
-            bool logDecisions)
+            bool logDecisions,
+            float goalSwitchThreshold)
         {
             GoapPlanningScheduler.Cancel(GetInstanceID());
             CancelCurrentAction("Agent reconfigured");
             _pendingActions.Clear();
             _trace.Clear();
             _decisionSnapshots.Clear();
+            _goalCooldownUntil.Clear();
+            _plannedTargets.Clear();
+            _planningActionCosts.Clear();
+            _lastGoalSelection = null;
+            _deferredGoal = null;
+            _finishCurrentPlanBeforeSwitch = false;
             _nextSnapshotSequence = 1;
             CurrentGoal = null;
             LastCompletedGoal = null;
@@ -279,6 +312,7 @@ namespace Practice.GOAP
             PlanningDeferred = false;
             _domain = domain;
             _decisionInterval = Mathf.Max(0.05f, decisionInterval);
+            _goalSwitchThreshold = Mathf.Max(0f, goalSwitchThreshold);
             _logDecisions = logDecisions;
             _plannerSettings = plannerSettings;
             _initialized = false;
@@ -301,6 +335,7 @@ namespace Practice.GOAP
             {
                 _domain = _profile.Domain;
                 _decisionInterval = _profile.DecisionInterval;
+                _goalSwitchThreshold = _profile.GoalSwitchThreshold;
                 _plannerSettings = _profile.PlannerSettings;
                 _logDecisions = _profile.LogDecisions;
             }
@@ -333,6 +368,8 @@ namespace Practice.GOAP
         {
             _actionBehaviours = GetComponentsInChildren<GoapActionBehaviour>(true);
             _sensors = GetComponentsInChildren<GoapSensorBehaviour>(true);
+            _goalScorers = GetComponentsInChildren<GoapGoalScorerBehaviour>(true);
+            _actionCostProviders = GetComponentsInChildren<GoapActionCostProviderBehaviour>(true);
         }
 
         private void ApplyInitialFacts(IEnumerable<GoapFactValueReference> values)
@@ -379,11 +416,39 @@ namespace Practice.GOAP
                 CompleteGoal();
             }
 
-            var selectedGoal = _goalSelector.Select(WorldState, GetAvailableGoals());
+            _lastGoalSelection = _goalSelector.SelectDetailed(
+                WorldState,
+                GetAvailableGoals(),
+                CurrentGoal,
+                _goalSwitchThreshold,
+                EvaluateSceneGoalScores,
+                GetGoalCooldownRemaining);
+            var selectedGoal = _lastGoalSelection.SelectedGoal;
+            if (ShouldDeferGoalSwitch(selectedGoal))
+            {
+                if (_deferredGoal != selectedGoal)
+                {
+                    _deferredGoal = selectedGoal;
+                    AddTrace(
+                        GoapTraceEventType.GoalSwitchDeferred,
+                        $"Will switch to '{selectedGoal.DisplayName}' after " +
+                        (_finishCurrentPlanBeforeSwitch ? "the current plan" : "the current action"));
+                }
+
+                selectedGoal = CurrentGoal;
+            }
+            else
+            {
+                _deferredGoal = null;
+            }
+
             if (selectedGoal != CurrentGoal)
             {
+                _finishCurrentPlanBeforeSwitch = false;
                 CancelCurrentAction(selectedGoal == null ? "No active goal" : "Higher-priority goal selected");
                 _pendingActions.Clear();
+                _plannedTargets.Clear();
+                _planningActionCosts.Clear();
                 CurrentGoal = selectedGoal;
                 LastPlan = null;
                 LastPlanningFailure = GoapPlanFailure.None;
@@ -391,7 +456,10 @@ namespace Practice.GOAP
                 _replanRequested = true;
                 if (selectedGoal != null)
                 {
-                    AddTrace(GoapTraceEventType.GoalSelected, $"Selected goal '{selectedGoal.DisplayName}'");
+                    AddTrace(
+                        GoapTraceEventType.GoalSelected,
+                        $"Selected goal '{selectedGoal.DisplayName}' " +
+                        $"(score {_lastGoalSelection.SelectedEvaluation.FinalScore:0.##})");
                 }
 
                 NotifyPlanChanged();
@@ -411,6 +479,7 @@ namespace Practice.GOAP
             {
                 if (!WorldState.Satisfies(CurrentAction.Preconditions) || !_runningBehaviour.CanContinue(_runningContext))
                 {
+                    _finishCurrentPlanBeforeSwitch = false;
                     CancelCurrentAction("Action invalidated by world state");
                     _pendingActions.Clear();
                     _replanRequested = true;
@@ -421,7 +490,7 @@ namespace Practice.GOAP
                 }
             }
 
-            if (_replanRequested || _pendingActions.Count == 0)
+            if ((_replanRequested && !_finishCurrentPlanBeforeSwitch) || _pendingActions.Count == 0)
             {
                 BuildPlan();
             }
@@ -434,6 +503,7 @@ namespace Practice.GOAP
 
         private void BuildPlan()
         {
+            _finishCurrentPlanBeforeSwitch = false;
             if (!GoapPlanningScheduler.TryAcquire(GetInstanceID()))
             {
                 _pendingActions.Clear();
@@ -446,8 +516,11 @@ namespace Practice.GOAP
             _replanRequested = false;
             _pendingActions.Clear();
 
+            _plannedTargets.Clear();
+            _planningActionCosts.Clear();
             var executableActions = GetAvailableActions()
                 .Where(action => action != null && FindBehaviour(action) != null)
+                .Where(PreparePlanningAction)
                 .ToArray();
             var startedAt = Time.realtimeSinceStartupAsDouble;
             var result = _planner.PlanCompiled(
@@ -455,7 +528,10 @@ namespace Practice.GOAP
                 executableActions,
                 CurrentGoal,
                 _domain.Compile(),
-                _plannerSettings);
+                _plannerSettings,
+                actionCostResolver: action => _planningActionCosts.TryGetValue(action, out var cost)
+                    ? cost
+                    : action.Cost);
             var planningMilliseconds = (Time.realtimeSinceStartupAsDouble - startedAt) * 1000d;
             GoapPlanningScheduler.Report(
                 planningMilliseconds,
@@ -495,7 +571,7 @@ namespace Practice.GOAP
         {
             var action = _pendingActions.Dequeue();
             var behaviour = FindBehaviour(action);
-            var context = new GoapActionContext(this, action);
+            var context = CreateActionContext(action);
 
             string failureReason = null;
             if (behaviour == null)
@@ -519,6 +595,7 @@ namespace Practice.GOAP
 
             if (failureReason != null)
             {
+                _finishCurrentPlanBeforeSwitch = false;
                 StatusMessage = $"Cannot start '{action.DisplayName}': {failureReason}; replanning";
                 AddTrace(GoapTraceEventType.ActionFailed, StatusMessage);
                 _pendingActions.Clear();
@@ -528,6 +605,11 @@ namespace Practice.GOAP
             }
 
             CurrentAction = action;
+            if (action.InterruptionPolicy == GoapActionInterruptionPolicy.FinishCurrentPlan)
+            {
+                _finishCurrentPlanBeforeSwitch = true;
+            }
+
             _runningBehaviour = behaviour;
             _runningContext = context;
             StatusMessage = $"Executing: {action.DisplayName}";
@@ -560,9 +642,14 @@ namespace Practice.GOAP
                 {
                     CompleteGoal();
                 }
+                else if (_pendingActions.Count == 0)
+                {
+                    _finishCurrentPlanBeforeSwitch = false;
+                }
             }
             else
             {
+                _finishCurrentPlanBeforeSwitch = false;
                 _pendingActions.Clear();
                 _replanRequested = true;
                 StatusMessage = string.IsNullOrWhiteSpace(failureReason)
@@ -578,6 +665,8 @@ namespace Practice.GOAP
 
         private void CancelCurrentAction(string reason)
         {
+            _deferredGoal = null;
+            _finishCurrentPlanBeforeSwitch = false;
             if (_runningBehaviour == null)
             {
                 return;
@@ -605,11 +694,20 @@ namespace Practice.GOAP
             PlanningDeferred = false;
             CancelCurrentAction($"Goal achieved: {completedGoal.DisplayName}");
             CurrentGoal = null;
+            _deferredGoal = null;
+            _finishCurrentPlanBeforeSwitch = false;
+            if (completedGoal.CooldownSeconds > 0f)
+            {
+                _goalCooldownUntil[completedGoal] = Time.time + completedGoal.CooldownSeconds;
+            }
+
             LastCompletedGoal = completedGoal;
             LastPlan = null;
             LastPlanningFailure = GoapPlanFailure.None;
             LastPlanningMessage = string.Empty;
             _pendingActions.Clear();
+            _plannedTargets.Clear();
+            _planningActionCosts.Clear();
             StatusMessage = $"Goal achieved: {completedGoal.DisplayName}";
             AddTrace(GoapTraceEventType.GoalCompleted, completedGoal.DisplayName);
             Log(StatusMessage);
@@ -649,7 +747,8 @@ namespace Practice.GOAP
             _goalDiagnostics.Clear();
             foreach (var goal in GetAvailableGoals().Where(goal => goal != null))
             {
-                _goalDiagnostics.Add(GoapDiagnosticUtility.EvaluateGoal(goal, WorldState));
+                var evaluation = _lastGoalSelection?.Find(goal) ?? EvaluateGoal(goal);
+                _goalDiagnostics.Add(GoapDiagnosticUtility.EvaluateGoal(goal, WorldState, evaluation));
             }
         }
 
@@ -697,7 +796,7 @@ namespace Practice.GOAP
                 .ToArray();
             var goals = GetAvailableGoals()
                 .Where(goal => goal != null)
-                .Select(goal => GoapDiagnosticUtility.EvaluateGoal(goal, WorldState))
+                .Select(goal => GoapDiagnosticUtility.EvaluateGoal(goal, WorldState, EvaluateGoal(goal)))
                 .ToArray();
             var planActions = new List<GoapActionDefinition>();
             if (CurrentAction != null)
@@ -734,15 +833,161 @@ namespace Practice.GOAP
             var behaviour = FindBehaviour(action);
             if (behaviour == null)
             {
-                return GoapDiagnosticUtility.EvaluateAction(action, WorldState, false);
+                return GoapDiagnosticUtility.EvaluateAction(
+                    action,
+                    WorldState,
+                    false,
+                    GetActionPlanningCost(action));
             }
 
-            var context = new GoapActionContext(this, action);
+            var context = CreateActionContext(action);
             return GoapDiagnosticUtility.EvaluateAction(
                 action,
                 WorldState,
                 true,
-                behaviour.EvaluateStart(context));
+                behaviour.EvaluateStart(context),
+                GetActionPlanningCost(action));
+        }
+
+        private GoapGoalEvaluation EvaluateGoal(GoapGoalDefinition goal)
+        {
+            return _goalSelector.Evaluate(
+                WorldState,
+                goal,
+                EvaluateSceneGoalScores,
+                GetGoalCooldownRemaining);
+        }
+
+        private bool ShouldDeferGoalSwitch(GoapGoalDefinition selectedGoal)
+        {
+            if (selectedGoal == null || selectedGoal == CurrentGoal || CurrentGoal == null)
+            {
+                return false;
+            }
+
+            var currentEvaluation = _lastGoalSelection?.Find(CurrentGoal);
+            if (currentEvaluation == null || !currentEvaluation.Eligible)
+            {
+                return false;
+            }
+
+            if (_finishCurrentPlanBeforeSwitch && (_runningBehaviour != null || _pendingActions.Count > 0))
+            {
+                return true;
+            }
+
+            return _runningBehaviour != null && CurrentAction != null &&
+                   CurrentAction.InterruptionPolicy != GoapActionInterruptionPolicy.Immediate;
+        }
+
+        private IEnumerable<GoapGoalScoreTerm> EvaluateSceneGoalScores(GoapGoalDefinition goal)
+        {
+            foreach (var scorer in _goalScorers)
+            {
+                if (scorer != null && scorer.Supports(goal))
+                {
+                    yield return new GoapGoalScoreTerm(
+                        scorer.Label,
+                        scorer.EvaluateScore(this, goal, WorldState));
+                }
+            }
+        }
+
+        private float GetGoalCooldownRemaining(GoapGoalDefinition goal)
+        {
+            if (goal == null || !_goalCooldownUntil.TryGetValue(goal, out var cooldownUntil))
+            {
+                return 0f;
+            }
+
+            var remaining = cooldownUntil - Time.time;
+            if (remaining <= 0f)
+            {
+                _goalCooldownUntil.Remove(goal);
+                return 0f;
+            }
+
+            return remaining;
+        }
+
+        private bool PreparePlanningAction(GoapActionDefinition action)
+        {
+            Transform target = null;
+            var hasTarget = action.TryGetPlanningTarget(out var descriptor);
+            if (hasTarget)
+            {
+                target = ResolvePlanningTarget(descriptor);
+                if (target == null)
+                {
+                    _planningActionCosts[action] = float.PositiveInfinity;
+                    return false;
+                }
+
+                _plannedTargets[action] = new ResolvedActionTarget(descriptor, target);
+            }
+
+            var cost = action.Cost;
+            if (target != null && action.DistanceCostPerUnit > 0f)
+            {
+                cost += Vector3.Distance(transform.position, target.position) * action.DistanceCostPerUnit;
+            }
+
+            foreach (var provider in _actionCostProviders)
+            {
+                if (provider != null && provider.Supports(action))
+                {
+                    cost += provider.EvaluateAdditionalCost(this, action, target);
+                }
+            }
+
+            if (float.IsNaN(cost) || float.IsInfinity(cost))
+            {
+                _planningActionCosts[action] = cost;
+                return false;
+            }
+
+            _planningActionCosts[action] = Mathf.Max(0.01f, cost);
+            return true;
+        }
+
+        private Transform ResolvePlanningTarget(GoapActionTargetDescriptor descriptor)
+        {
+            if (descriptor.Mode == GoapActionTargetMode.SmartObjectCategory)
+            {
+                return GoapSmartObject.FindClosest(
+                    descriptor.Identifier,
+                    transform.position,
+                    this,
+                    float.PositiveInfinity,
+                    descriptor.IncludeBusySmartObjects)?.transform;
+            }
+
+            if (descriptor.Mode == GoapActionTargetMode.NamedTarget &&
+                TryGetComponent<GoapAgentAuthoring>(out var authoring))
+            {
+                return authoring.ResolveTarget(descriptor.Identifier);
+            }
+
+            return null;
+        }
+
+        private GoapActionContext CreateActionContext(GoapActionDefinition action)
+        {
+            var context = new GoapActionContext(this, action);
+            if (_plannedTargets.TryGetValue(action, out var plannedTarget) && plannedTarget.Target != null)
+            {
+                context.SetTarget(plannedTarget.Descriptor, plannedTarget.Target);
+            }
+            else if (action != null && action.TryGetPlanningTarget(out var descriptor))
+            {
+                var target = ResolvePlanningTarget(descriptor);
+                if (target != null)
+                {
+                    context.SetTarget(descriptor, target);
+                }
+            }
+
+            return context;
         }
 
         private void Log(string message)
@@ -761,6 +1006,18 @@ namespace Practice.GOAP
             }
 
             return settings;
+        }
+
+        private readonly struct ResolvedActionTarget
+        {
+            public GoapActionTargetDescriptor Descriptor { get; }
+            public Transform Target { get; }
+
+            public ResolvedActionTarget(GoapActionTargetDescriptor descriptor, Transform target)
+            {
+                Descriptor = descriptor;
+                Target = target;
+            }
         }
     }
 }

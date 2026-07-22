@@ -234,7 +234,8 @@ namespace Practice.GOAP.Editor
             var actions = ViewedActionDiagnostics;
             EditorGUILayout.LabelField(
                 "Goals",
-                $"{goals.Count(item => item.Active && !item.Satisfied)} active, " +
+                $"{goals.Count(item => item.Eligible)} eligible, " +
+                $"{goals.Count(item => item.OnCooldown)} cooldown, " +
                 $"{goals.Count(item => item.Satisfied)} satisfied, {goals.Count(item => !item.Active)} inactive");
             EditorGUILayout.LabelField(
                 "Actions",
@@ -316,25 +317,45 @@ namespace Practice.GOAP.Editor
         private void DrawGoals()
         {
             DrawHeader("Goal Evaluation");
-            foreach (var item in ViewedGoalDiagnostics.OrderByDescending(item => item.Goal.Priority))
+            foreach (var item in ViewedGoalDiagnostics
+                         .OrderByDescending(item => item.Eligible)
+                         .ThenByDescending(item => item.FinalScore))
             {
                 var key = item.Goal.GetInstanceID();
                 _goalFoldouts.TryGetValue(key, out var expanded);
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
-                var selected = item.Goal == ViewedGoal ? "SELECTED" : item.Satisfied ? "DONE" : item.Active ? "ACTIVE" : "INACTIVE";
+                var selected = item.Goal == ViewedGoal
+                    ? "SELECTED"
+                    : item.Satisfied
+                        ? "DONE"
+                        : item.OnCooldown
+                            ? "COOLDOWN"
+                            : item.Active ? "ELIGIBLE" : "INACTIVE";
                 expanded = EditorGUILayout.Foldout(
                     expanded,
                     $"[{selected}] {item.Goal.DisplayName}",
                     true,
                     EditorStyles.foldoutHeader);
-                EditorGUILayout.LabelField($"Priority {item.Goal.Priority}", GUILayout.Width(80f));
+                EditorGUILayout.LabelField($"Score {item.FinalScore:0.##}", GUILayout.Width(82f));
                 EditorGUILayout.EndHorizontal();
                 _goalFoldouts[key] = expanded;
                 EditorGUILayout.LabelField(item.Reason, EditorStyles.wordWrappedMiniLabel);
 
                 if (expanded)
                 {
+                    EditorGUILayout.LabelField("Score", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Base Priority", item.BaseScore.ToString("0.##"));
+                    foreach (var term in item.ScoreTerms)
+                    {
+                        EditorGUILayout.LabelField(term.Label, term.Value.ToString("+0.##;-0.##;0"));
+                    }
+
+                    if (item.OnCooldown)
+                    {
+                        EditorGUILayout.LabelField("Cooldown", $"{item.CooldownRemaining:0.0}s");
+                    }
+
                     DrawConditionGroup("Activation", item.ActivationConditions);
                     DrawConditionGroup("Desired State", item.DesiredState);
                 }
@@ -387,7 +408,8 @@ namespace Practice.GOAP.Editor
                     $"[{state}] {item.Action.DisplayName}",
                     true,
                     EditorStyles.foldoutHeader);
-                EditorGUILayout.LabelField($"Cost {item.Action.Cost:0.##}", GUILayout.Width(62f));
+                var costLabel = item.PlanningAvailable ? item.PlanningCost.ToString("0.##") : "n/a";
+                EditorGUILayout.LabelField($"Cost {costLabel}", GUILayout.Width(70f));
                 EditorGUILayout.EndHorizontal();
                 _actionFoldouts[key] = expanded;
                 EditorGUILayout.LabelField(item.Reason, EditorStyles.wordWrappedMiniLabel);
@@ -402,6 +424,12 @@ namespace Practice.GOAP.Editor
                     EditorGUILayout.LabelField(
                         "Executor",
                         item.HasExecutor ? executor : $"Missing: {executor}");
+                    EditorGUILayout.LabelField("Base Cost", item.BaseCost.ToString("0.##"));
+                    EditorGUILayout.LabelField(
+                        "Context Cost",
+                        item.PlanningAvailable
+                            ? item.PlanningCost.ToString("0.##")
+                            : "Unavailable target/context");
                     if (item.HasExecutor)
                     {
                         EditorGUILayout.LabelField(

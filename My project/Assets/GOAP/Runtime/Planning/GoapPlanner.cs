@@ -19,7 +19,8 @@ namespace Practice.GOAP
             IEnumerable<GoapActionDefinition> availableActions,
             GoapGoalDefinition goal,
             GoapPlannerSettings? settings = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<GoapActionDefinition, float> actionCostResolver = null)
         {
             return PlanInternal(
                 initialState,
@@ -27,7 +28,8 @@ namespace Practice.GOAP
                 goal,
                 null,
                 settings,
-                cancellationToken);
+                cancellationToken,
+                actionCostResolver);
         }
 
         public GoapPlanResult PlanCompiled(
@@ -36,7 +38,8 @@ namespace Practice.GOAP
             GoapGoalDefinition goal,
             GoapCompiledDomain compiledDomain,
             GoapPlannerSettings? settings = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<GoapActionDefinition, float> actionCostResolver = null)
         {
             return PlanInternal(
                 initialState,
@@ -44,7 +47,8 @@ namespace Practice.GOAP
                 goal,
                 compiledDomain,
                 settings,
-                cancellationToken);
+                cancellationToken,
+                actionCostResolver);
         }
 
         private GoapPlanResult PlanInternal(
@@ -53,7 +57,8 @@ namespace Practice.GOAP
             GoapGoalDefinition goal,
             GoapCompiledDomain compiledDomain,
             GoapPlannerSettings? settings,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Func<GoapActionDefinition, float> actionCostResolver)
         {
             using var marker = PlanMarker.Auto();
             var stopwatch = Stopwatch.StartNew();
@@ -67,6 +72,13 @@ namespace Practice.GOAP
                 .Where(IsUsable)
                 .OrderBy(action => action.DisplayName, StringComparer.Ordinal)
                 .ThenBy(action => action.Id, StringComparer.Ordinal)
+                .ToArray();
+            var actionCosts = actions.ToDictionary(
+                action => action,
+                action => ResolveActionCost(action, actionCostResolver));
+            actions = actions
+                .Where(action => !float.IsNaN(actionCosts[action]) &&
+                                 !float.IsInfinity(actionCosts[action]))
                 .ToArray();
 
             GoapPlannerState initialPlannerState;
@@ -92,7 +104,7 @@ namespace Practice.GOAP
                     compiledGoal = layout.Compile(goal.DesiredState);
                 }
 
-                cheapestProducerCosts = CollectCheapestProducerCosts(actions, goal);
+                cheapestProducerCosts = CollectCheapestProducerCosts(actions, goal, actionCosts);
             }
 
             if (initialPlannerState.Satisfies(compiledGoal))
@@ -190,7 +202,7 @@ namespace Practice.GOAP
                         continue;
                     }
 
-                    var nextCost = current.Cost + action.Definition.Cost;
+                    var nextCost = current.Cost + actionCosts[action.Definition];
                     if (bestKnownCost.TryGetValue(nextState, out var bestCost) &&
                         bestCost <= nextCost + CostEpsilon)
                     {
@@ -252,7 +264,8 @@ namespace Practice.GOAP
 
         private static float[] CollectCheapestProducerCosts(
             IReadOnlyList<GoapActionDefinition> actions,
-            GoapGoalDefinition goal)
+            GoapGoalDefinition goal,
+            IReadOnlyDictionary<GoapActionDefinition, float> actionCosts)
         {
             var costs = new float[goal.DesiredState.Count];
             for (var desiredIndex = 0; desiredIndex < goal.DesiredState.Count; desiredIndex++)
@@ -268,12 +281,22 @@ namespace Practice.GOAP
                 {
                     if (action.Effects.Any(effect => effect.CanEstablish(desired)))
                     {
-                        costs[desiredIndex] = Math.Min(costs[desiredIndex], action.Cost);
+                        costs[desiredIndex] = Math.Min(costs[desiredIndex], actionCosts[action]);
                     }
                 }
             }
 
             return costs;
+        }
+
+        private static float ResolveActionCost(
+            GoapActionDefinition action,
+            Func<GoapActionDefinition, float> actionCostResolver)
+        {
+            var cost = actionCostResolver?.Invoke(action) ?? action.Cost;
+            return float.IsNaN(cost) || float.IsInfinity(cost)
+                ? cost
+                : Math.Max(0.01f, cost);
         }
 
         private static bool EveryGoalFactHasProducer(

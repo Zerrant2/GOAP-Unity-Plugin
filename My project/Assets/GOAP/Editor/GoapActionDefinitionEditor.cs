@@ -15,6 +15,10 @@ namespace Practice.GOAP.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_icon"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_nodeColor"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_cost"));
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("_interruptionPolicy"),
+                new GUIContent("Goal Interruption"));
+            DrawTargeting();
 
             var execution = serializedObject.FindProperty("_builtInExecution");
             var mode = execution.FindPropertyRelative("_mode");
@@ -77,6 +81,35 @@ namespace Practice.GOAP.Editor
             {
                 EditorGUILayout.PropertyField(execution.FindPropertyRelative("_inventoryItemId"));
                 EditorGUILayout.PropertyField(execution.FindPropertyRelative("_inventoryAmount"));
+            }
+        }
+
+        private void DrawTargeting()
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Planning Context", EditorStyles.boldLabel);
+            var targetMode = serializedObject.FindProperty("_targetMode");
+            EditorGUILayout.PropertyField(targetMode, new GUIContent("Target"));
+            var mode = (GoapActionTargetMode)targetMode.enumValueIndex;
+            if (mode == GoapActionTargetMode.SmartObjectCategory || mode == GoapActionTargetMode.NamedTarget)
+            {
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("_planningTargetId"),
+                    new GUIContent(mode == GoapActionTargetMode.SmartObjectCategory ? "Category" : "Target ID"));
+            }
+
+            if (mode == GoapActionTargetMode.SmartObjectCategory)
+            {
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("_includeBusySmartObjects"),
+                    new GUIContent("Include Busy"));
+            }
+
+            if (mode != GoapActionTargetMode.None)
+            {
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("_distanceCostPerUnit"),
+                    new GUIContent("Distance Cost / Unit"));
             }
         }
     }

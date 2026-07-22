@@ -119,6 +119,24 @@ namespace Practice.GOAP
                     CheckExecutionSteps(action, issues);
                 }
 
+                if ((action.TargetMode == GoapActionTargetMode.SmartObjectCategory ||
+                     action.TargetMode == GoapActionTargetMode.NamedTarget) &&
+                    !action.TryGetPlanningTarget(out _))
+                {
+                    issues.Add(new GoapValidationIssue(
+                        GoapValidationSeverity.Error,
+                        $"Action '{action.DisplayName}' has an explicit planning target without an identifier.",
+                        action));
+                }
+
+                if (action.DistanceCostPerUnit > 0f && !action.TryGetPlanningTarget(out _))
+                {
+                    issues.Add(new GoapValidationIssue(
+                        GoapValidationSeverity.Warning,
+                        $"Action '{action.DisplayName}' has distance cost but no planning target.",
+                        action));
+                }
+
                 if (action.Effects.Count == 0)
                 {
                     issues.Add(new GoapValidationIssue(
@@ -165,6 +183,34 @@ namespace Practice.GOAP
 
                 CheckConditions(goal.ActivationConditions, facts, goal, "activation condition", false, issues);
                 CheckConditions(goal.DesiredState, facts, goal, "desired condition", false, issues);
+                foreach (var modifier in goal.ScoreModifiers)
+                {
+                    if (modifier == null || modifier.Fact == null)
+                    {
+                        issues.Add(new GoapValidationIssue(
+                            GoapValidationSeverity.Error,
+                            $"Goal '{goal.DisplayName}' contains a score modifier without a Fact.",
+                            goal));
+                        continue;
+                    }
+
+                    if (!facts.Contains(modifier.Fact))
+                    {
+                        issues.Add(new GoapValidationIssue(
+                            GoapValidationSeverity.Error,
+                            $"Score modifier Fact '{modifier.Fact.DisplayName}' used by " +
+                            $"'{goal.DisplayName}' is not in this domain.",
+                            goal));
+                    }
+
+                    if (Math.Abs(modifier.InputMaximum - modifier.InputMinimum) <= 0.0001f)
+                    {
+                        issues.Add(new GoapValidationIssue(
+                            GoapValidationSeverity.Error,
+                            $"Goal '{goal.DisplayName}' has a score modifier with a zero-sized Fact Range.",
+                            goal));
+                    }
+                }
 
                 foreach (var desired in goal.DesiredState.Where(condition => condition.IsValid))
                 {
@@ -191,7 +237,8 @@ namespace Practice.GOAP
                                               action.Effects.Any(condition => condition.Fact == fact)) ||
                            domain.Goals.Where(goal => goal != null)
                                .Any(goal => goal.ActivationConditions.Any(condition => condition.Fact == fact) ||
-                                            goal.DesiredState.Any(condition => condition.Fact == fact));
+                                            goal.DesiredState.Any(condition => condition.Fact == fact) ||
+                                            goal.ScoreModifiers.Any(modifier => modifier != null && modifier.Fact == fact));
                 if (!used)
                 {
                     issues.Add(new GoapValidationIssue(

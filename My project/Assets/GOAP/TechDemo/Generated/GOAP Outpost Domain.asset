@@ -1,0 +1,1753 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8821905954763384476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Need Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 26c5008677a94bb6818df0bf2d42d605
+  _displayName: Need Wood
+  _description: The stockpile is below its wood target.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-8646398288711865529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Wood Stockpile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 7e689498fdd44e048559d7cc0c3127fe
+  _displayName: Wood Stockpile
+  _description: Shared wood in the outpost.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 1
+  _defaultValue: 0
+  _defaultInteger: 4
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-8270715962654052947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Safe
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 176c828bdbed423293c2a7a30b251a24
+  _displayName: Safe
+  _description: No monster is close to this agent.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-7950409670133682953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Gather Berries
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: b7574f1d83964361b3c5fd8ce7da921e
+  _displayName: Gather Berries
+  _description: Reserve a berry bush and gather one unit of food.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _interruptionPolicy: 1
+  _targetMode: 2
+  _planningTargetId: Outpost Food
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0.1
+  _executorId: outpost.harvest-food
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: 6971175064670472383}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: 8641352401698728497}
+    _comparison: 2
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 8641352401698728497}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 1
+--- !u!114 &-7710805599940698722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Escape Danger
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: d675fd78b14f450294f976f41bbcc47f
+  _displayName: Escape Danger
+  _description: Immediate self-preservation for civilian roles.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 100
+  _cooldownSeconds: 0.5
+  _scoreModifiers:
+  - _fact: {fileID: -7402628898805198194}
+    _inputMinimum: 100
+    _inputMaximum: 20
+    _scoreAtMinimum: 0
+    _scoreAtMaximum: 35
+    _clampInput: 1
+  _activationConditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: -8270715962654052947}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: -8270715962654052947}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-7402628898805198194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Health
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: f648ee7254594077a4039b2e7b31d863
+  _displayName: Health
+  _description: Agent health from 0 to 100.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 2
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 100
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-7333328140533073714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Wood Delivered
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 8306850118364611971cb8fa9e4d0583
+  _displayName: Wood Delivered
+  _description: This agent completed one wood delivery.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-6912921817820682509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Attack Monster
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 97f8ba1703cf4b2a9b3b7ec2cb8c95c0
+  _displayName: Attack Monster
+  _description: Reserve the nearest monster, approach it, and attack.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.4
+  _interruptionPolicy: 1
+  _targetMode: 2
+  _planningTargetId: Outpost Enemy
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0.08
+  _executorId: outpost.attack
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: 7460373796028984887}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 8808605684426306217}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-6446438913842828896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Carry Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 9dc05c63c0a145638394b987773d3fff
+  _displayName: Carry Wood
+  _description: Wood carried by this agent.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 1
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-5916563178987922402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Enemy Visible
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: ba5deb717563452bbafff3f1661194c3
+  _displayName: Enemy Visible
+  _description: At least one monster is alive.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-4720879868081298042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Deliver Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 178f65339f3847b9922cc4a38acdd354
+  _displayName: Deliver Wood
+  _description: Carry gathered wood back to the shared stockpile.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 0.7
+  _interruptionPolicy: 1
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.deliver-wood
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -6446438913842828896}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -6446438913842828896}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: -8646398288711865529}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 1
+  - _fact: {fileID: -7333328140533073714}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-3657668770509904960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Bed Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: fe7b5238e8b54fd6a37079b40c8dea6c
+  _displayName: Bed Available
+  _description: A reservable bed is available.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-3220110055539179099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Flee to Safety
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 783a394dd86d4cab8b81ff6cb39fdaf8
+  _displayName: Flee to Safety
+  _description: Leave a threatened area before returning to work.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 0.8
+  _interruptionPolicy: 0
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.flee
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: -8270715962654052947}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -8270715962654052947}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-2508628087213968469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Take Weapon
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 6b70dec503964048afc65b9ee4178e0e
+  _displayName: Take Weapon
+  _description: Visit the armory before entering combat.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 0.8
+  _interruptionPolicy: 1
+  _targetMode: 2
+  _planningTargetId: Outpost Armory
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0.06
+  _executorId: outpost.take-weapon
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: 7460373796028984887}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 7460373796028984887}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-1726053375241208032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Harvest Tree
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 5dc8e3784cca421e8b53aedea6efedf1
+  _displayName: Harvest Tree
+  _description: Reserve a tree and gather one unit of wood.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.1
+  _interruptionPolicy: 1
+  _targetMode: 2
+  _planningTargetId: Outpost Tree
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0.1
+  _executorId: outpost.harvest-wood
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -1714666615849746599}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: -6446438913842828896}
+    _comparison: 2
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -6446438913842828896}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 1
+--- !u!114 &-1714666615849746599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Tree Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 48306cbcb75a4dbfae4ca1a613756384
+  _displayName: Tree Available
+  _description: A reservable tree is available.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-1394268151601754325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Patrol
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 1409e3c6322746a68dacd10caa72c20a
+  _displayName: Patrol
+  _description: Low-priority guard activity between attacks.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 10
+  _cooldownSeconds: 1.5
+  _scoreModifiers: []
+  _activationConditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 1942105685077351593}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &-907386305199782428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Need Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 5a99df84b0e34450a918de8ce195dd2b
+  _displayName: Need Food
+  _description: The stockpile is below its food target.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &-689376374726574718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Energy
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: c1c49958b98d455eb0a6728d708c80c1
+  _displayName: Energy
+  _description: Agent energy from 0 to 100.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 2
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 100
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9315a24090d14564f90ce093e02cdbd0, type: 3}
+  m_Name: GOAP Outpost Domain
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapDomain
+  _facts:
+  - {fileID: 2378106858683828140}
+  - {fileID: -689376374726574718}
+  - {fileID: -7402628898805198194}
+  - {fileID: 7186165260586347759}
+  - {fileID: -8646398288711865529}
+  - {fileID: 8641352401698728497}
+  - {fileID: -6446438913842828896}
+  - {fileID: 7460373796028984887}
+  - {fileID: -1714666615849746599}
+  - {fileID: 6971175064670472383}
+  - {fileID: -3657668770509904960}
+  - {fileID: -8821905954763384476}
+  - {fileID: -907386305199782428}
+  - {fileID: -7333328140533073714}
+  - {fileID: 6132091056367617884}
+  - {fileID: 7719425691735071953}
+  - {fileID: 1599762574480322199}
+  - {fileID: -5916563178987922402}
+  - {fileID: 8808605684426306217}
+  - {fileID: -8270715962654052947}
+  - {fileID: 1942105685077351593}
+  _actions:
+  - {fileID: 4354566115408318690}
+  - {fileID: 3544745240682367460}
+  - {fileID: -3220110055539179099}
+  - {fileID: -1726053375241208032}
+  - {fileID: -4720879868081298042}
+  - {fileID: -7950409670133682953}
+  - {fileID: 130329775358861015}
+  - {fileID: -2508628087213968469}
+  - {fileID: -6912921817820682509}
+  - {fileID: 8843643256182616473}
+  - {fileID: 1921835937841111926}
+  _goals:
+  - {fileID: -7710805599940698722}
+  - {fileID: 2582709743569334069}
+  - {fileID: 1207967941370631981}
+  - {fileID: 771039989642297132}
+  - {fileID: 4699988901539057444}
+  - {fileID: 2407688148228218849}
+  - {fileID: 1623670199948331209}
+  - {fileID: -1394268151601754325}
+  _nodeLayout:
+  - _definitionId: cc8d2498a5f84d0c840ef00a8fa313ab
+    _kind: 2
+    _position: {x: 40, y: 40}
+  - _definitionId: c1c49958b98d455eb0a6728d708c80c1
+    _kind: 2
+    _position: {x: 40, y: 155}
+  - _definitionId: f648ee7254594077a4039b2e7b31d863
+    _kind: 2
+    _position: {x: 40, y: 270}
+  - _definitionId: 766e22ff019f4b629274d7292aee237d
+    _kind: 2
+    _position: {x: 40, y: 385}
+  - _definitionId: 7e689498fdd44e048559d7cc0c3127fe
+    _kind: 2
+    _position: {x: 40, y: 500}
+  - _definitionId: c11d9bdeadc849a5acf50a15db713c05
+    _kind: 2
+    _position: {x: 40, y: 615}
+  - _definitionId: 9dc05c63c0a145638394b987773d3fff
+    _kind: 2
+    _position: {x: 40, y: 730}
+  - _definitionId: 92876b71d1ee4f8aa94600967425ae62
+    _kind: 2
+    _position: {x: 40, y: 845}
+  - _definitionId: 48306cbcb75a4dbfae4ca1a613756384
+    _kind: 2
+    _position: {x: 40, y: 960}
+  - _definitionId: c7da0be7c96c499d8a907e0d5af88322
+    _kind: 2
+    _position: {x: 40, y: 1075}
+  - _definitionId: fe7b5238e8b54fd6a37079b40c8dea6c
+    _kind: 2
+    _position: {x: 40, y: 1190}
+  - _definitionId: 26c5008677a94bb6818df0bf2d42d605
+    _kind: 2
+    _position: {x: 40, y: 1305}
+  - _definitionId: 5a99df84b0e34450a918de8ce195dd2b
+    _kind: 2
+    _position: {x: 40, y: 1420}
+  - _definitionId: 8306850118364611971cb8fa9e4d0583
+    _kind: 2
+    _position: {x: 40, y: 1535}
+  - _definitionId: fdfffa6860604e3380c25a85f7da2da7
+    _kind: 2
+    _position: {x: 40, y: 1650}
+  - _definitionId: d5dd11b587e0437989db9cfe5a375e84
+    _kind: 2
+    _position: {x: 40, y: 1765}
+  - _definitionId: 2b0d190fc9074a14b2e64d5adfe1411e
+    _kind: 2
+    _position: {x: 40, y: 1880}
+  - _definitionId: ba5deb717563452bbafff3f1661194c3
+    _kind: 2
+    _position: {x: 40, y: 1995}
+  - _definitionId: e959a3a8ccfd4285aabeb61e43538e96
+    _kind: 2
+    _position: {x: 40, y: 2110}
+  - _definitionId: 176c828bdbed423293c2a7a30b251a24
+    _kind: 2
+    _position: {x: 40, y: 2225}
+  - _definitionId: 9df4aab49dd743ee82f6841b8c1fff2c
+    _kind: 2
+    _position: {x: 40, y: 2340}
+  - _definitionId: 3a8e1cf57893491aa5fabb329ec2ff5d
+    _kind: 0
+    _position: {x: 440, y: 40}
+  - _definitionId: 78d67c7692bb4989bdc62ef29cfb10b1
+    _kind: 0
+    _position: {x: 440, y: 230}
+  - _definitionId: 783a394dd86d4cab8b81ff6cb39fdaf8
+    _kind: 0
+    _position: {x: 440, y: 420}
+  - _definitionId: 5dc8e3784cca421e8b53aedea6efedf1
+    _kind: 0
+    _position: {x: 440, y: 610}
+  - _definitionId: 178f65339f3847b9922cc4a38acdd354
+    _kind: 0
+    _position: {x: 440, y: 800}
+  - _definitionId: b7574f1d83964361b3c5fd8ce7da921e
+    _kind: 0
+    _position: {x: 440, y: 990}
+  - _definitionId: 9dcd2b8efa7144419b2c4607120e9f0e
+    _kind: 0
+    _position: {x: 440, y: 1180}
+  - _definitionId: 6b70dec503964048afc65b9ee4178e0e
+    _kind: 0
+    _position: {x: 440, y: 1370}
+  - _definitionId: 97f8ba1703cf4b2a9b3b7ec2cb8c95c0
+    _kind: 0
+    _position: {x: 440, y: 1560}
+  - _definitionId: 8b15dcb0cd404bf0902a4880251258a1
+    _kind: 0
+    _position: {x: 440, y: 1750}
+  - _definitionId: b799abc9d6ce4aff8bde870702293345
+    _kind: 0
+    _position: {x: 440, y: 1940}
+  - _definitionId: d675fd78b14f450294f976f41bbcc47f
+    _kind: 1
+    _position: {x: 900, y: 40}
+  - _definitionId: 382ccdce1b33430688a04e10483cf466
+    _kind: 1
+    _position: {x: 900, y: 270}
+  - _definitionId: d41061dd423c4d23856f69a8c6b6d96d
+    _kind: 1
+    _position: {x: 900, y: 500}
+  - _definitionId: 8b9dc120461a4e0395658659d16fa50e
+    _kind: 1
+    _position: {x: 900, y: 730}
+  - _definitionId: 91871af697e6491cba312210137f06e4
+    _kind: 1
+    _position: {x: 900, y: 960}
+  - _definitionId: 3cb31eacab1148699622bedb03df98a1
+    _kind: 1
+    _position: {x: 900, y: 1190}
+  - _definitionId: 5f6c968cf3f24bba961f2ee3f4a92251
+    _kind: 1
+    _position: {x: 900, y: 1420}
+  - _definitionId: 1409e3c6322746a68dacd10caa72c20a
+    _kind: 1
+    _position: {x: 900, y: 1650}
+  _graphGroups: []
+  _graphNotes: []
+--- !u!114 &130329775358861015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Deliver Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 9dcd2b8efa7144419b2c4607120e9f0e
+  _displayName: Deliver Food
+  _description: Carry gathered food back to the shared stockpile.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 0.7
+  _interruptionPolicy: 1
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.deliver-food
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: 8641352401698728497}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 8641352401698728497}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  - _fact: {fileID: 7186165260586347759}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 1
+  - _fact: {fileID: 6132091056367617884}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &771039989642297132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Recover Energy
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 8b9dc120461a4e0395658659d16fa50e
+  _displayName: Recover Energy
+  _description: Reserve a bed and recover before continuing work.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 70
+  _cooldownSeconds: 3
+  _scoreModifiers:
+  - _fact: {fileID: -689376374726574718}
+    _inputMinimum: 25
+    _inputMaximum: 0
+    _scoreAtMinimum: 0
+    _scoreAtMaximum: 35
+    _clampInput: 1
+  _activationConditions:
+  - _fact: {fileID: -689376374726574718}
+    _comparison: 3
+    _value: 1
+    _integerValue: 25
+    _floatValue: 25
+    _enumValue: 25
+    _effectOperation: 0
+  - _fact: {fileID: -3657668770509904960}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: -689376374726574718}
+    _comparison: 5
+    _value: 1
+    _integerValue: 80
+    _floatValue: 80
+    _enumValue: 80
+    _effectOperation: 0
+--- !u!114 &1207967941370631981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Satisfy Hunger
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: d41061dd423c4d23856f69a8c6b6d96d
+  _displayName: Satisfy Hunger
+  _description: Interrupt work when food is available and hunger is high.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 85
+  _cooldownSeconds: 3
+  _scoreModifiers:
+  - _fact: {fileID: 2378106858683828140}
+    _inputMinimum: 65
+    _inputMaximum: 100
+    _scoreAtMinimum: 0
+    _scoreAtMaximum: 35
+    _clampInput: 1
+  _activationConditions:
+  - _fact: {fileID: 2378106858683828140}
+    _comparison: 5
+    _value: 1
+    _integerValue: 65
+    _floatValue: 65
+    _enumValue: 65
+    _effectOperation: 0
+  - _fact: {fileID: 7186165260586347759}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 2378106858683828140}
+    _comparison: 3
+    _value: 1
+    _integerValue: 20
+    _floatValue: 20
+    _enumValue: 20
+    _effectOperation: 0
+--- !u!114 &1599762574480322199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Camp Repaired
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 2b0d190fc9074a14b2e64d5adfe1411e
+  _displayName: Camp Repaired
+  _description: This agent completed one repair.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &1623670199948331209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Collect Wood
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 5f6c968cf3f24bba961f2ee3f4a92251
+  _displayName: Collect Wood
+  _description: Maintain the wood target using gather and delivery actions.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 40
+  _cooldownSeconds: 1
+  _scoreModifiers: []
+  _activationConditions:
+  - _fact: {fileID: -8821905954763384476}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: -7333328140533073714}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &1921835937841111926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Patrol Perimeter
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: b799abc9d6ce4aff8bde870702293345
+  _displayName: Patrol Perimeter
+  _description: Move between changing points around the outpost.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _interruptionPolicy: 0
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.patrol
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 0
+    _integerValue: 0
+    _floatValue: 0
+    _enumValue: 0
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 1942105685077351593}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &1942105685077351593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Patrol Done
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 9df4aab49dd743ee82f6841b8c1fff2c
+  _displayName: Patrol Done
+  _description: This guard completed one patrol leg.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &2378106858683828140
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Hunger
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: cc8d2498a5f84d0c840ef00a8fa313ab
+  _displayName: Hunger
+  _description: Agent hunger from 0 to 100.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 2
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 12
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &2407688148228218849
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Collect Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 3cb31eacab1148699622bedb03df98a1
+  _displayName: Collect Food
+  _description: Maintain the food target using gather and delivery actions.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 45
+  _cooldownSeconds: 1
+  _scoreModifiers: []
+  _activationConditions:
+  - _fact: {fileID: -907386305199782428}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 6132091056367617884}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &2582709743569334069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Defend Outpost
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 382ccdce1b33430688a04e10483cf466
+  _displayName: Defend Outpost
+  _description: Defeat one current threat, then reassess the wave.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 95
+  _cooldownSeconds: 0.75
+  _scoreModifiers:
+  - _fact: {fileID: -5916563178987922402}
+    _inputMinimum: 0
+    _inputMaximum: 1
+    _scoreAtMinimum: 0
+    _scoreAtMaximum: 15
+    _clampInput: 1
+  _activationConditions:
+  - _fact: {fileID: -5916563178987922402}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 8808605684426306217}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &3544745240682367460
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Sleep in Bed
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 78d67c7692bb4989bdc62ef29cfb10b1
+  _displayName: Sleep in Bed
+  _description: Reserve a bed, move to it, and restore energy.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.2
+  _interruptionPolicy: 1
+  _targetMode: 2
+  _planningTargetId: Outpost Bed
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0.08
+  _executorId: outpost.sleep
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: -689376374726574718}
+    _comparison: 3
+    _value: 1
+    _integerValue: 25
+    _floatValue: 25
+    _enumValue: 25
+    _effectOperation: 0
+  - _fact: {fileID: -3657668770509904960}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: -689376374726574718}
+    _comparison: 0
+    _value: 1
+    _integerValue: 100
+    _floatValue: 100
+    _enumValue: 100
+    _effectOperation: 0
+--- !u!114 &4354566115408318690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Eat at Stockpile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 3a8e1cf57893491aa5fabb329ec2ff5d
+  _displayName: Eat at Stockpile
+  _description: Walk to the shared stockpile and consume one food.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1
+  _interruptionPolicy: 0
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.eat
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: 2378106858683828140}
+    _comparison: 5
+    _value: 1
+    _integerValue: 65
+    _floatValue: 65
+    _enumValue: 65
+    _effectOperation: 0
+  - _fact: {fileID: 7186165260586347759}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 2378106858683828140}
+    _comparison: 0
+    _value: 1
+    _integerValue: 8
+    _floatValue: 8
+    _enumValue: 8
+    _effectOperation: 0
+  - _fact: {fileID: 7186165260586347759}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 2
+--- !u!114 &4699988901539057444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01fc5b9269fcf459ffb8a828ee4e39, type: 3}
+  m_Name: Repair Camp
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapGoalDefinition
+  _id: 91871af697e6491cba312210137f06e4
+  _displayName: Repair Camp
+  _description: Keep the central building operational.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _priority: 60
+  _cooldownSeconds: 2
+  _scoreModifiers: []
+  _activationConditions:
+  - _fact: {fileID: 7719425691735071953}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _desiredState:
+  - _fact: {fileID: 1599762574480322199}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+--- !u!114 &6132091056367617884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Food Delivered
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: fdfffa6860604e3380c25a85f7da2da7
+  _displayName: Food Delivered
+  _description: This agent completed one food delivery.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &6971175064670472383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Food Source Available
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: c7da0be7c96c499d8a907e0d5af88322
+  _displayName: Food Source Available
+  _description: A reservable bush is available.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 1
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &7186165260586347759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Food Stockpile
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 766e22ff019f4b629274d7292aee237d
+  _displayName: Food Stockpile
+  _description: Shared food in the outpost.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 1
+  _defaultValue: 0
+  _defaultInteger: 8
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &7460373796028984887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Has Weapon
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: 92876b71d1ee4f8aa94600967425ae62
+  _displayName: Has Weapon
+  _description: The agent has visited the armory.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &7719425691735071953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Camp Damaged
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: d5dd11b587e0437989db9cfe5a375e84
+  _displayName: Camp Damaged
+  _description: The central building needs repairs.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &8641352401698728497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Carry Food
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: c11d9bdeadc849a5acf50a15db713c05
+  _displayName: Carry Food
+  _description: Food carried by this agent.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 1
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &8808605684426306217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af388f736db25148971be444a6ed32c, type: 3}
+  m_Name: Enemy Defeated
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapFact
+  _id: e959a3a8ccfd4285aabeb61e43538e96
+  _displayName: Enemy Defeated
+  _description: This guard defeated one monster.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _valueType: 0
+  _defaultValue: 0
+  _defaultInteger: 0
+  _defaultFloat: 0
+  _enumOptions:
+  - None
+  _defaultEnumIndex: 0
+--- !u!114 &8843643256182616473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 023f6833ebf6ddb4888f37d7e5b5c6d7, type: 3}
+  m_Name: Repair Camp
+  m_EditorClassIdentifier: Practice.GOAP.Runtime::Practice.GOAP.GoapActionDefinition
+  _id: 8b15dcb0cd404bf0902a4880251258a1
+  _displayName: Repair Camp
+  _description: Spend one wood to restore the camp.
+  _category: 
+  _icon: {fileID: 0}
+  _nodeColor: {r: 0, g: 0, b: 0, a: 0}
+  _cost: 1.3
+  _interruptionPolicy: 1
+  _targetMode: 0
+  _planningTargetId: 
+  _includeBusySmartObjects: 0
+  _distanceCostPerUnit: 0
+  _executorId: outpost.repair
+  _builtInExecution:
+    _mode: 0
+    _targetCategory: 
+    _moveToTarget: 0
+    _reserveTarget: 0
+    _consumeTarget: 0
+    _useNavMesh: 0
+    _moveSpeed: 0
+    _interactionRange: 0
+    _duration: 0
+    _inventoryOperation: 0
+    _inventoryItemId: 
+    _inventoryAmount: 0
+    _animatorTrigger: 
+  _executionSteps: []
+  _preconditions:
+  - _fact: {fileID: 7719425691735071953}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: -8646398288711865529}
+    _comparison: 5
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  _effects:
+  - _fact: {fileID: 1599762574480322199}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 0
+  - _fact: {fileID: -8646398288711865529}
+    _comparison: 0
+    _value: 1
+    _integerValue: 1
+    _floatValue: 1
+    _enumValue: 1
+    _effectOperation: 2
