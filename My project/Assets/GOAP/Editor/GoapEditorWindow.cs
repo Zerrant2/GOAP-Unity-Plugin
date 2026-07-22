@@ -20,6 +20,8 @@ namespace Practice.GOAP.Editor
         private ScrollView _validationList;
         private IMGUIContainer _inspectorContainer;
         private HelpBox _validationBox;
+        private ToolbarToggle _followAgentToggle;
+        private Label _runtimeContextLabel;
         private UnityEditor.Editor _definitionEditor;
         private GoapDomain _domain;
         private GoapDefinition _selection;
@@ -34,6 +36,27 @@ namespace Practice.GOAP.Editor
             window.Show();
         }
 
+        public static void OpenForRuntime(
+            GoapAgent agent,
+            GoapDecisionSnapshot snapshot = null,
+            bool framePlan = false)
+        {
+            GoapRuntimeDebugContext.Set(agent, snapshot);
+            var window = GetWindow<GoapEditorWindow>();
+            window.titleContent = new GUIContent("GOAP Planner");
+            window.minSize = new Vector2(980f, 580f);
+            window.Show();
+            window.rootVisualElement.schedule.Execute(() =>
+            {
+                window._followAgentToggle?.SetValueWithoutNotify(true);
+                window.ApplyRuntimeContext();
+                if (framePlan)
+                {
+                    window._graphView?.FrameRuntimePlan();
+                }
+            });
+        }
+
         public void CreateGUI()
         {
             rootVisualElement.style.backgroundColor = new Color(0.105f, 0.115f, 0.125f);
@@ -43,6 +66,8 @@ namespace Practice.GOAP.Editor
             EditorApplication.update += OnEditorUpdate;
             Undo.undoRedoPerformed += RefreshAll;
             GoapContentCreationService.DomainChanged += OnDomainContentChanged;
+            GoapRuntimeDebugContext.Changed += OnRuntimeContextChanged;
+            ApplyRuntimeContext();
         }
 
         private void OnDisable()
@@ -50,6 +75,7 @@ namespace Practice.GOAP.Editor
             EditorApplication.update -= OnEditorUpdate;
             Undo.undoRedoPerformed -= RefreshAll;
             GoapContentCreationService.DomainChanged -= OnDomainContentChanged;
+            GoapRuntimeDebugContext.Changed -= OnRuntimeContextChanged;
             DestroyDefinitionEditor();
         }
 
@@ -129,6 +155,44 @@ namespace Practice.GOAP.Editor
                     ? DropdownMenuAction.Status.Checked
                     : DropdownMenuAction.Status.Normal);
             graphToolbar.Add(connectionsMenu);
+            _followAgentToggle = new ToolbarToggle
+            {
+                text = "Follow Agent",
+                tooltip = "Open the Domain used by the Agent selected in Runtime Debugger."
+            };
+            _followAgentToggle.SetValueWithoutNotify(true);
+            _followAgentToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue)
+                {
+                    ApplyRuntimeContext();
+                }
+            });
+            graphToolbar.Add(_followAgentToggle);
+            graphToolbar.Add(new ToolbarButton(UseSelectedAgent)
+            {
+                text = "Use Selected NPC",
+                tooltip = "Use the GOAP Agent selected in the Hierarchy as the live graph context."
+            });
+            graphToolbar.Add(new ToolbarButton(() => _graphView.FrameRuntimePlan())
+            {
+                text = "Frame Plan",
+                tooltip = "Frame the runtime Goal, current plan Actions, and their Facts."
+            });
+            _runtimeContextLabel = new Label("No runtime agent")
+            {
+                tooltip = "Current live or historical runtime context.",
+                style =
+                {
+                    minWidth = 120f,
+                    maxWidth = 220f,
+                    unityTextAlign = TextAnchor.MiddleLeft,
+                    marginLeft = 5f,
+                    marginRight = 5f,
+                    opacity = 0.72f
+                }
+            };
+            graphToolbar.Add(_runtimeContextLabel);
             graphToolbar.Add(new ToolbarButton(() => _graphView.FrameEverything()) { text = "Frame All" });
             rootVisualElement.Add(graphToolbar);
             _tabsToolbar = new Toolbar();
@@ -306,6 +370,9 @@ namespace Practice.GOAP.Editor
         {
             RefreshLibrary();
             _graphView?.Rebuild(_domain, SelectDefinition);
+            _graphView?.SetRuntimeContext(
+                GoapRuntimeDebugContext.Agent,
+                GoapRuntimeDebugContext.Snapshot);
             _graphView?.ApplySearch(_searchField?.value);
             ValidateDomain();
             _inspectorContainer?.MarkDirtyRepaint();
@@ -837,6 +904,60 @@ namespace Practice.GOAP.Editor
 
             _nextRuntimeRefresh = EditorApplication.timeSinceStartup + 0.25d;
             _graphView?.UpdateRuntimeHighlights();
+            UpdateRuntimeContextLabel();
+        }
+
+        private void OnRuntimeContextChanged()
+        {
+            ApplyRuntimeContext();
+        }
+
+        private void ApplyRuntimeContext()
+        {
+            var agent = GoapRuntimeDebugContext.Agent;
+            var snapshot = GoapRuntimeDebugContext.Snapshot;
+            var runtimeDomain = snapshot != null ? snapshot.Domain : agent?.Domain;
+            if (_followAgentToggle?.value == true && runtimeDomain != null && runtimeDomain != _domain)
+            {
+                SetDomain(runtimeDomain);
+            }
+
+            _graphView?.SetRuntimeContext(agent, snapshot);
+            UpdateRuntimeContextLabel();
+        }
+
+        private void UseSelectedAgent()
+        {
+            var agent = Selection.activeGameObject?.GetComponentInParent<GoapAgent>();
+            if (agent == null)
+            {
+                ShowNotification(new GUIContent("Select a GameObject with a GOAP Agent in the Hierarchy."));
+                return;
+            }
+
+            GoapRuntimeDebugContext.Set(agent, null);
+            _graphView?.FrameRuntimePlan();
+        }
+
+        private void UpdateRuntimeContextLabel()
+        {
+            if (_runtimeContextLabel == null)
+            {
+                return;
+            }
+
+            var agent = GoapRuntimeDebugContext.Agent;
+            var snapshot = GoapRuntimeDebugContext.Snapshot;
+            _runtimeContextLabel.text = agent == null
+                ? "No runtime agent"
+                : snapshot != null
+                    ? $"{agent.name} | Snapshot #{snapshot.Sequence}"
+                    : $"{agent.name} | Live";
+            _runtimeContextLabel.tooltip = agent == null
+                ? "Choose an NPC in Runtime Debugger or use Use Selected NPC."
+                : snapshot != null
+                    ? $"Historical state at {snapshot.Time:0.00}s ({snapshot.Trigger})."
+                    : agent.StatusMessage;
         }
 
         private void OnDomainContentChanged(GoapDomain domain)

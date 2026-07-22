@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -62,6 +63,14 @@ namespace Practice.GOAP.Tests
             Assert.That(agent.CurrentAction, Is.Null);
             Assert.That(agent.CurrentGoal, Is.Null);
             Assert.That(agent.LastCompletedGoal, Is.SameAs(goal));
+
+            Assert.That(
+                agent.DecisionSnapshots.Any(snapshot => snapshot.Trigger == GoapTraceEventType.ActionSucceeded),
+                Is.True);
+            var initialSnapshot = agent.DecisionSnapshots.First(
+                snapshot => snapshot.Trigger == GoapTraceEventType.Initialized);
+            Assert.That(agent.RestoreDebugSnapshot(initialSnapshot), Is.True);
+            Assert.That(agent.WorldState.Get(needsHelp), Is.True);
         }
 
         [UnityTest]

@@ -11,6 +11,7 @@ namespace Practice.GOAP
     public sealed class GoapAgent : MonoBehaviour
     {
         private const int MaxTraceEntries = 100;
+        private const int MaxDecisionSnapshots = 50;
         private static readonly ProfilerMarker DecisionMarker = new("GOAP.Agent.Decision");
         private static readonly ProfilerMarker SensorMarker = new("GOAP.Agent.Sensors");
 
@@ -26,6 +27,7 @@ namespace Practice.GOAP
         private readonly List<GoapTraceEntry> _trace = new();
         private readonly List<GoapActionDiagnostic> _actionDiagnostics = new();
         private readonly List<GoapGoalDiagnostic> _goalDiagnostics = new();
+        private readonly List<GoapDecisionSnapshot> _decisionSnapshots = new();
         private GoapActionBehaviour[] _actionBehaviours = Array.Empty<GoapActionBehaviour>();
         private GoapSensorBehaviour[] _sensors = Array.Empty<GoapSensorBehaviour>();
         private Coroutine _actionRoutine;
@@ -34,6 +36,7 @@ namespace Practice.GOAP
         private float _nextDecisionTime;
         private bool _initialized;
         private bool _replanRequested = true;
+        private int _nextSnapshotSequence = 1;
 
         public GoapDomain Domain => _domain;
         public GoapAgentProfile Profile => _profile;
@@ -42,12 +45,15 @@ namespace Practice.GOAP
         public GoapGoalDefinition LastCompletedGoal { get; private set; }
         public GoapActionDefinition CurrentAction { get; private set; }
         public GoapPlan LastPlan { get; private set; }
+        public GoapPlanFailure LastPlanningFailure { get; private set; }
+        public string LastPlanningMessage { get; private set; } = string.Empty;
         public string StatusMessage { get; private set; } = "Waiting for domain";
         public bool Paused { get; private set; }
         public IReadOnlyCollection<GoapActionDefinition> PendingActions => _pendingActions;
         public IReadOnlyList<GoapTraceEntry> Trace => _trace;
         public IReadOnlyList<GoapActionDiagnostic> ActionDiagnostics => _actionDiagnostics;
         public IReadOnlyList<GoapGoalDiagnostic> GoalDiagnostics => _goalDiagnostics;
+        public IReadOnlyList<GoapDecisionSnapshot> DecisionSnapshots => _decisionSnapshots;
 
         public event Action<GoapAgent> PlanChanged;
         public event Action<GoapAgent> ActionChanged;
@@ -180,6 +186,28 @@ namespace Practice.GOAP
             return WorldState?.Clone();
         }
 
+        public GoapDecisionSnapshot CaptureDebugSnapshot(string reason = "Captured by debugger")
+        {
+            if (!EnsureInitialized())
+            {
+                return null;
+            }
+
+            AddTrace(GoapTraceEventType.SnapshotCaptured, reason);
+            return _decisionSnapshots.Count > 0 ? _decisionSnapshots[^1] : null;
+        }
+
+        public bool RestoreDebugSnapshot(GoapDecisionSnapshot snapshot)
+        {
+            return snapshot != null && snapshot.Domain == _domain && RestoreWorldState(snapshot.CaptureWorldState());
+        }
+
+        public void ClearDebugHistory()
+        {
+            _trace.Clear();
+            _decisionSnapshots.Clear();
+        }
+
         public bool RestoreWorldState(GoapWorldState snapshot)
         {
             if (snapshot == null || !EnsureInitialized())
@@ -191,6 +219,8 @@ namespace Practice.GOAP
             _pendingActions.Clear();
             CurrentGoal = null;
             LastPlan = null;
+            LastPlanningFailure = GoapPlanFailure.None;
+            LastPlanningMessage = string.Empty;
             WorldState = snapshot.Clone();
             _replanRequested = true;
             _nextDecisionTime = 0f;
@@ -230,9 +260,13 @@ namespace Practice.GOAP
             CancelCurrentAction("Agent reconfigured");
             _pendingActions.Clear();
             _trace.Clear();
+            _decisionSnapshots.Clear();
+            _nextSnapshotSequence = 1;
             CurrentGoal = null;
             LastCompletedGoal = null;
             LastPlan = null;
+            LastPlanningFailure = GoapPlanFailure.None;
+            LastPlanningMessage = string.Empty;
             _domain = domain;
             _decisionInterval = Mathf.Max(0.05f, decisionInterval);
             _logDecisions = logDecisions;
@@ -342,6 +376,8 @@ namespace Practice.GOAP
                 _pendingActions.Clear();
                 CurrentGoal = selectedGoal;
                 LastPlan = null;
+                LastPlanningFailure = GoapPlanFailure.None;
+                LastPlanningMessage = string.Empty;
                 _replanRequested = true;
                 if (selectedGoal != null)
                 {
@@ -354,6 +390,8 @@ namespace Practice.GOAP
             if (CurrentGoal == null)
             {
                 StatusMessage = "Idle: every goal is satisfied";
+                LastPlanningFailure = GoapPlanFailure.None;
+                LastPlanningMessage = string.Empty;
                 return;
             }
 
@@ -394,6 +432,8 @@ namespace Practice.GOAP
             if (!result.Success)
             {
                 LastPlan = null;
+                LastPlanningFailure = result.Failure;
+                LastPlanningMessage = result.Message;
                 StatusMessage = $"No plan: {result.Message}";
                 AddTrace(GoapTraceEventType.PlanFailed, StatusMessage);
                 Log(StatusMessage);
@@ -402,6 +442,8 @@ namespace Practice.GOAP
             }
 
             LastPlan = result.Plan;
+            LastPlanningFailure = GoapPlanFailure.None;
+            LastPlanningMessage = string.Empty;
             foreach (var action in result.Plan.Actions)
             {
                 _pendingActions.Enqueue(action);
@@ -423,9 +465,26 @@ namespace Practice.GOAP
             var behaviour = FindBehaviour(action);
             var context = new GoapActionContext(this, action);
 
-            if (behaviour == null || !WorldState.Satisfies(action.Preconditions) || !behaviour.CanStart(context))
+            string failureReason = null;
+            if (behaviour == null)
             {
-                StatusMessage = $"Cannot start '{action.DisplayName}', replanning";
+                failureReason = "no matching executor";
+            }
+            else if (!WorldState.Satisfies(action.Preconditions))
+            {
+                var unmet = action.Preconditions
+                    .Select(condition => GoapDiagnosticUtility.EvaluateCondition(condition, WorldState))
+                    .First(item => !item.Satisfied);
+                failureReason = unmet.Reason;
+            }
+            else if (!behaviour.CanStart(context))
+            {
+                failureReason = "executor rejected the current scene state";
+            }
+
+            if (failureReason != null)
+            {
+                StatusMessage = $"Cannot start '{action.DisplayName}': {failureReason}; replanning";
                 AddTrace(GoapTraceEventType.ActionFailed, StatusMessage);
                 _pendingActions.Clear();
                 _replanRequested = true;
@@ -508,6 +567,8 @@ namespace Practice.GOAP
             CurrentGoal = null;
             LastCompletedGoal = completedGoal;
             LastPlan = null;
+            LastPlanningFailure = GoapPlanFailure.None;
+            LastPlanningMessage = string.Empty;
             _pendingActions.Clear();
             StatusMessage = $"Goal achieved: {completedGoal.DisplayName}";
             AddTrace(GoapTraceEventType.GoalCompleted, completedGoal.DisplayName);
@@ -536,39 +597,22 @@ namespace Practice.GOAP
             _actionDiagnostics.Clear();
             if (_domain == null || WorldState == null)
             {
+                _goalDiagnostics.Clear();
                 return;
             }
 
             foreach (var action in GetAvailableActions().Where(action => action != null))
             {
-                var behaviour = FindBehaviour(action);
-                if (behaviour == null)
-                {
-                    _actionDiagnostics.Add(new GoapActionDiagnostic(action, false, "No matching executor"));
-                }
-                else if (WorldState.Satisfies(action.Preconditions))
-                {
-                    _actionDiagnostics.Add(new GoapActionDiagnostic(action, true, "Ready now"));
-                }
-                else
-                {
-                    var missing = action.Preconditions
-                        .Where(condition => !condition.Matches(WorldState.GetValue(condition.Fact)))
-                        .Select(condition => condition.ToString());
-                    _actionDiagnostics.Add(new GoapActionDiagnostic(
-                        action,
-                        true,
-                        $"Waiting for: {string.Join(", ", missing)}"));
-                }
+                _actionDiagnostics.Add(GoapDiagnosticUtility.EvaluateAction(
+                    action,
+                    WorldState,
+                    FindBehaviour(action) != null));
             }
 
             _goalDiagnostics.Clear();
             foreach (var goal in GetAvailableGoals().Where(goal => goal != null))
             {
-                var active = WorldState.Satisfies(goal.ActivationConditions);
-                var satisfied = WorldState.Satisfies(goal.DesiredState);
-                var reason = satisfied ? "Satisfied" : active ? "Active" : "Activation conditions are false";
-                _goalDiagnostics.Add(new GoapGoalDiagnostic(goal, active, satisfied, reason));
+                _goalDiagnostics.Add(GoapDiagnosticUtility.EvaluateGoal(goal, WorldState));
             }
         }
 
@@ -583,6 +627,71 @@ namespace Practice.GOAP
             if (_trace.Count > MaxTraceEntries)
             {
                 _trace.RemoveAt(0);
+            }
+
+            CaptureDecisionSnapshot(type, message, type == GoapTraceEventType.SnapshotCaptured);
+        }
+
+        private void CaptureDecisionSnapshot(GoapTraceEventType trigger, string reason, bool force)
+        {
+            if (_domain == null || WorldState == null)
+            {
+                return;
+            }
+
+            var planSummary = GetPlanSummary();
+            if (!force && _decisionSnapshots.Count > 0 && _decisionSnapshots[^1].MatchesCurrent(
+                    trigger,
+                    StatusMessage,
+                    _domain,
+                    WorldState,
+                    CurrentGoal,
+                    CurrentAction,
+                    planSummary,
+                    LastPlanningFailure,
+                    LastPlanningMessage))
+            {
+                return;
+            }
+
+            var actions = GetAvailableActions()
+                .Where(action => action != null)
+                .Select(action => GoapDiagnosticUtility.EvaluateAction(
+                    action,
+                    WorldState,
+                    FindBehaviour(action) != null))
+                .ToArray();
+            var goals = GetAvailableGoals()
+                .Where(goal => goal != null)
+                .Select(goal => GoapDiagnosticUtility.EvaluateGoal(goal, WorldState))
+                .ToArray();
+            var planActions = new List<GoapActionDefinition>();
+            if (CurrentAction != null)
+            {
+                planActions.Add(CurrentAction);
+            }
+
+            planActions.AddRange(_pendingActions);
+            _decisionSnapshots.Add(new GoapDecisionSnapshot(
+                _nextSnapshotSequence++,
+                Time.time,
+                trigger,
+                reason,
+                StatusMessage,
+                _domain,
+                WorldState,
+                CurrentGoal,
+                CurrentAction,
+                planSummary,
+                planActions,
+                LastPlan,
+                LastPlanningFailure,
+                LastPlanningMessage,
+                actions,
+                goals));
+            if (_decisionSnapshots.Count > MaxDecisionSnapshots)
+            {
+                _decisionSnapshots.RemoveAt(0);
             }
         }
 

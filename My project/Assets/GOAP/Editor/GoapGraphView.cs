@@ -32,6 +32,8 @@ namespace Practice.GOAP.Editor
         private bool _rebuilding;
         private Port _dragSourcePort;
         private Vector2 _lastPointerPosition;
+        private GoapAgent _runtimeAgent;
+        private GoapDecisionSnapshot _runtimeSnapshot;
 
         public event Action<GoapNodeKind, Vector2> CreateRequested;
         public event Action<GoapNodeKind> BuilderRequested;
@@ -43,6 +45,7 @@ namespace Practice.GOAP.Editor
         public bool PreconditionsVisible => _showPreconditions;
         public bool EffectsVisible => _showEffects;
         public bool GoalLinksVisible => _showGoalLinks;
+        public bool HasRuntimeContext => GetRuntimeDomain() == _domain && _runtimeAgent != null;
 
         public GoapGraphView()
         {
@@ -272,6 +275,63 @@ namespace Practice.GOAP.Editor
             RefreshGraphVisuals();
         }
 
+        public void SetRuntimeContext(GoapAgent agent, GoapDecisionSnapshot snapshot)
+        {
+            _runtimeAgent = agent;
+            _runtimeSnapshot = snapshot;
+            UpdateRuntimeHighlights();
+        }
+
+        public bool FrameRuntimePlan()
+        {
+            if (!HasRuntimeContext)
+            {
+                return false;
+            }
+
+            var definitions = new HashSet<GoapDefinition>();
+            var goal = GetRuntimeGoal();
+            if (goal != null)
+            {
+                definitions.Add(goal);
+                foreach (var fact in goal.ActivationConditions.Concat(goal.DesiredState)
+                             .Select(condition => condition.Fact)
+                             .Where(fact => fact != null))
+                {
+                    definitions.Add(fact);
+                }
+            }
+
+            foreach (var action in GetRuntimePlanActions())
+            {
+                definitions.Add(action);
+                foreach (var fact in action.Preconditions.Concat(action.Effects)
+                             .Select(condition => condition.Fact)
+                             .Where(fact => fact != null))
+                {
+                    definitions.Add(fact);
+                }
+            }
+
+            var planNodes = definitions
+                .Where(definition => _nodes.ContainsKey(definition))
+                .Select(definition => _nodes[definition])
+                .ToArray();
+            if (planNodes.Length == 0)
+            {
+                return false;
+            }
+
+            ClearSelection();
+            foreach (var node in planNodes)
+            {
+                AddToSelection(node);
+            }
+
+            schedule.Execute(() => FrameSelection());
+            return true;
+        }
+
         public void SetValidationIssues(IReadOnlyList<GoapValidationIssue> issues)
         {
             _validation.Clear();
@@ -318,64 +378,117 @@ namespace Practice.GOAP.Editor
 
         public void UpdateRuntimeHighlights()
         {
+            RefreshGraphVisuals();
             foreach (var pair in _nodes)
             {
                 SetNodeAccent(pair.Value, GetBaseColor(pair.Key));
+                var runtimeBadge = pair.Value.Q<Label>("runtime-badge");
+                if (runtimeBadge != null)
+                {
+                    runtimeBadge.style.display = DisplayStyle.None;
+                }
+                pair.Value.tooltip = pair.Key.Description;
             }
 
-            if (!EditorApplication.isPlaying)
+            if (!EditorApplication.isPlaying || !HasRuntimeContext)
             {
                 return;
             }
 
-            foreach (var agent in UnityEngine.Object.FindObjectsByType<GoapAgent>(FindObjectsSortMode.None))
+            var diagnostics = GetRuntimeActionDiagnostics()
+                .Where(item => item.Action != null)
+                .GroupBy(item => item.Action)
+                .ToDictionary(group => group.Key, group => group.First());
+            foreach (var diagnostic in diagnostics.Values.Where(item => !item.Executable))
             {
-                if (agent.Domain != _domain)
+                if (!_nodes.TryGetValue(diagnostic.Action, out var blockedNode))
                 {
                     continue;
                 }
 
-                if (agent.LastPlan != null)
-                {
-                    foreach (var plannedAction in agent.LastPlan.Actions)
-                    {
-                        if (_nodes.TryGetValue(plannedAction, out var plannedNode))
-                        {
-                            SetNodeAccent(plannedNode, new Color(0.95f, 0.78f, 0.22f));
-                        }
-                    }
-                }
+                var label = diagnostic.HasExecutor ? "BLOCKED" : "NO EXECUTOR";
+                var color = diagnostic.HasExecutor
+                    ? new Color(0.88f, 0.32f, 0.28f)
+                    : new Color(0.98f, 0.2f, 0.2f);
+                var detail = GetActionRuntimeDetail(diagnostic);
+                SetNodeAccent(blockedNode, color);
+                SetRuntimeBadge(blockedNode, label, color, detail);
+                blockedNode.tooltip = BuildRuntimeTooltip(diagnostic.Action.Description, detail);
+            }
 
-                foreach (var pendingAction in agent.PendingActions)
-                {
-                    if (_nodes.TryGetValue(pendingAction, out var pendingNode))
-                    {
-                        SetNodeAccent(pendingNode, new Color(0.95f, 0.78f, 0.22f));
-                    }
-                }
-
-                if (agent.CurrentGoal != null && _nodes.TryGetValue(agent.CurrentGoal, out var goalNode))
-                {
-                    SetNodeAccent(goalNode, new Color(0.18f, 0.9f, 0.58f));
-                }
-
-                if (agent.CurrentAction != null && _nodes.TryGetValue(agent.CurrentAction, out var actionNode))
-                {
-                    SetNodeAccent(actionNode, new Color(1f, 0.52f, 0.12f));
-                }
-
-                if (agent.WorldState == null)
+            foreach (var fact in _domain.Facts.Where(fact => fact != null))
+            {
+                var value = GetRuntimeValue(fact);
+                if (value.Equals(fact.DefaultTypedValue) || !_nodes.TryGetValue(fact, out var factNode))
                 {
                     continue;
                 }
 
-                foreach (var fact in _domain.Facts.Where(fact => fact != null))
+                var formattedValue = fact.FormatValue(value);
+                var color = new Color(0.2f, 0.86f, 0.82f);
+                SetNodeAccent(factNode, color);
+                SetRuntimeBadge(factNode, formattedValue, color, $"Runtime value: {formattedValue}");
+                factNode.tooltip = BuildRuntimeTooltip(fact.Description, $"Runtime value: {formattedValue}");
+            }
+
+            var planActions = GetRuntimePlanActions();
+            var currentAction = GetRuntimeAction();
+            var planGroups = planActions
+                .Select((action, index) => new { Action = action, Position = index + 1 })
+                .Where(item => item.Action != null)
+                .GroupBy(item => item.Action);
+            foreach (var group in planGroups)
+            {
+                var action = group.Key;
+                if (!_nodes.TryGetValue(action, out var actionNode))
                 {
-                    if (_nodes.TryGetValue(fact, out var factNode) &&
-                        !agent.WorldState.GetValue(fact).Equals(fact.DefaultTypedValue))
-                    {
-                        SetNodeAccent(factNode, new Color(0.2f, 0.86f, 0.82f));
-                    }
+                    continue;
+                }
+
+                var running = action == currentAction;
+                var color = running
+                    ? new Color(0.2f, 0.9f, 0.5f)
+                    : new Color(0.98f, 0.74f, 0.18f);
+                var positions = string.Join(",", group.Select(item => item.Position));
+                var label = running ? $"RUNNING | {positions}" : $"PLAN {positions}";
+                diagnostics.TryGetValue(action, out var diagnostic);
+                var detail = diagnostic.Action != null ? GetActionRuntimeDetail(diagnostic) : "Planned action";
+                SetNodeAccent(actionNode, color, 4f);
+                SetRuntimeBadge(actionNode, label, color, detail);
+                actionNode.tooltip = BuildRuntimeTooltip(action.Description, detail);
+            }
+
+            var currentGoal = GetRuntimeGoal();
+            if (currentGoal != null && _nodes.TryGetValue(currentGoal, out var goalNode))
+            {
+                var color = new Color(0.25f, 0.68f, 1f);
+                var diagnostic = GetRuntimeGoalDiagnostics().FirstOrDefault(item => item.Goal == currentGoal);
+                var detail = diagnostic.Goal != null ? diagnostic.Reason : "Selected goal";
+                SetNodeAccent(goalNode, color, 4f);
+                SetRuntimeBadge(goalNode, "GOAL", color, detail);
+                goalNode.tooltip = BuildRuntimeTooltip(currentGoal.Description, detail);
+            }
+
+            foreach (var edge in edges)
+            {
+                if (edge.userData is not GoapGraphEdgeBinding binding)
+                {
+                    continue;
+                }
+
+                if (binding.Owner == currentGoal)
+                {
+                    ApplyRuntimeEdgeStyle(edge, new Color(0.25f, 0.68f, 1f));
+                    continue;
+                }
+
+                if (binding.Owner is GoapActionDefinition action && planActions.Contains(action))
+                {
+                    ApplyRuntimeEdgeStyle(
+                        edge,
+                        action == currentAction
+                            ? new Color(0.2f, 0.9f, 0.5f)
+                            : new Color(0.98f, 0.74f, 0.18f));
                 }
             }
         }
@@ -1151,16 +1264,117 @@ namespace Practice.GOAP.Editor
             };
         }
 
-        private static void SetNodeAccent(Node node, Color color)
+        private GoapDomain GetRuntimeDomain()
+        {
+            return _runtimeSnapshot != null ? _runtimeSnapshot.Domain : _runtimeAgent?.Domain;
+        }
+
+        private GoapGoalDefinition GetRuntimeGoal()
+        {
+            return _runtimeSnapshot != null ? _runtimeSnapshot.Goal : _runtimeAgent?.CurrentGoal;
+        }
+
+        private GoapActionDefinition GetRuntimeAction()
+        {
+            return _runtimeSnapshot != null ? _runtimeSnapshot.Action : _runtimeAgent?.CurrentAction;
+        }
+
+        private IReadOnlyList<GoapActionDefinition> GetRuntimePlanActions()
+        {
+            if (_runtimeSnapshot != null)
+            {
+                return _runtimeSnapshot.PlanActions;
+            }
+
+            if (_runtimeAgent == null)
+            {
+                return Array.Empty<GoapActionDefinition>();
+            }
+
+            var result = new List<GoapActionDefinition>();
+            if (_runtimeAgent.CurrentAction != null)
+            {
+                result.Add(_runtimeAgent.CurrentAction);
+            }
+
+            result.AddRange(_runtimeAgent.PendingActions);
+            return result;
+        }
+
+        private IReadOnlyList<GoapActionDiagnostic> GetRuntimeActionDiagnostics()
+        {
+            return _runtimeSnapshot != null
+                ? _runtimeSnapshot.ActionDiagnostics
+                : _runtimeAgent?.ActionDiagnostics ?? Array.Empty<GoapActionDiagnostic>();
+        }
+
+        private IReadOnlyList<GoapGoalDiagnostic> GetRuntimeGoalDiagnostics()
+        {
+            return _runtimeSnapshot != null
+                ? _runtimeSnapshot.GoalDiagnostics
+                : _runtimeAgent?.GoalDiagnostics ?? Array.Empty<GoapGoalDiagnostic>();
+        }
+
+        private GoapValue GetRuntimeValue(GoapFact fact)
+        {
+            return _runtimeSnapshot != null
+                ? _runtimeSnapshot.GetValue(fact)
+                : _runtimeAgent?.WorldState?.GetValue(fact) ?? fact.DefaultTypedValue;
+        }
+
+        private static string BuildRuntimeTooltip(string description, string runtimeDetail)
+        {
+            return string.IsNullOrWhiteSpace(description)
+                ? $"Runtime: {runtimeDetail}"
+                : $"{description}\n\nRuntime: {runtimeDetail}";
+        }
+
+        private static string GetActionRuntimeDetail(GoapActionDiagnostic diagnostic)
+        {
+            if (!diagnostic.HasExecutor)
+            {
+                return "No matching executor";
+            }
+
+            var unmet = diagnostic.Preconditions
+                .Where(condition => !condition.Satisfied)
+                .Select(condition => condition.Reason)
+                .ToArray();
+            return unmet.Length == 0 ? "Ready now" : string.Join("\n", unmet);
+        }
+
+        private static void SetRuntimeBadge(
+            Node node,
+            string text,
+            Color color,
+            string tooltip)
+        {
+            var badge = node.Q<Label>("runtime-badge");
+            if (badge == null)
+            {
+                badge = new Label { name = "runtime-badge" };
+                badge.style.fontSize = 9;
+                badge.style.unityFontStyleAndWeight = FontStyle.Bold;
+                badge.style.marginLeft = 5f;
+                node.titleContainer.Add(badge);
+            }
+
+            badge.text = text;
+            badge.tooltip = tooltip;
+            badge.style.color = color;
+            badge.style.display = DisplayStyle.Flex;
+        }
+
+        private static void SetNodeAccent(Node node, Color color, float width = 2f)
         {
             node.style.borderTopColor = color;
             node.style.borderRightColor = color;
             node.style.borderBottomColor = color;
             node.style.borderLeftColor = color;
-            node.style.borderTopWidth = 2f;
-            node.style.borderRightWidth = 2f;
-            node.style.borderBottomWidth = 2f;
-            node.style.borderLeftWidth = 2f;
+            node.style.borderTopWidth = width;
+            node.style.borderRightWidth = width;
+            node.style.borderBottomWidth = width;
+            node.style.borderLeftWidth = width;
         }
 
         private void ApplyDetailsState()
@@ -1340,6 +1554,23 @@ namespace Practice.GOAP.Editor
             edge.edgeControl.drawToCap = true;
             edge.edgeControl.toCapColor = color;
             edge.edgeControl.capRadius = emphasized ? 4f : 3f;
+            edge.edgeControl.MarkDirtyRepaint();
+        }
+
+        private static void ApplyRuntimeEdgeStyle(Edge edge, Color color)
+        {
+            if (edge?.edgeControl == null)
+            {
+                return;
+            }
+
+            edge.style.opacity = 1f;
+            edge.edgeControl.inputColor = color;
+            edge.edgeControl.outputColor = color;
+            edge.edgeControl.edgeWidth = 4;
+            edge.edgeControl.drawToCap = true;
+            edge.edgeControl.toCapColor = color;
+            edge.edgeControl.capRadius = 4f;
             edge.edgeControl.MarkDirtyRepaint();
         }
 

@@ -235,6 +235,31 @@ namespace Practice.GOAP.Tests
         }
 
         [Test]
+        public void ActionDiagnosticReportsExpectedAndActualTypedValues()
+        {
+            var wood = ScriptableObject.CreateInstance<GoapFact>();
+            wood.ConfigureInteger("Wood", 0);
+            _created.Add(wood);
+            var gather = Action(
+                "Gather Wood",
+                1f,
+                "gather",
+                new[] { new GoapCondition(wood, 3, GoapComparison.GreaterOrEqual) },
+                null);
+            var state = new GoapWorldState();
+            state.Set(wood, 1);
+
+            var diagnostic = GoapDiagnosticUtility.EvaluateAction(gather, state, true);
+
+            Assert.That(diagnostic.Executable, Is.False);
+            Assert.That(diagnostic.HasExecutor, Is.True);
+            Assert.That(diagnostic.Preconditions.Count, Is.EqualTo(1));
+            Assert.That(diagnostic.Preconditions[0].Requirement, Is.EqualTo("Wood >= 3"));
+            Assert.That(diagnostic.Preconditions[0].Actual, Is.EqualTo("1"));
+            StringAssert.Contains("actual 1", diagnostic.Reason);
+        }
+
+        [Test]
         public void GeneratedDemoDomainPassesValidation()
         {
             var domain = AssetDatabase.LoadAssetAtPath<GoapDomain>(
